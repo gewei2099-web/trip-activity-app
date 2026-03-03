@@ -91,17 +91,17 @@ export default function TripDetail() {
             <div key={day.date} style={styles.day}>
               <div style={styles.dayDate}>{day.date}</div>
               {(day.activities || []).filter(a => a.title?.trim()).map((a, j) => (
-                <div key={a.id || j} style={styles.actItem}>
-                  <div style={styles.act}>
-                    <span style={styles.actTime}>{a.time || '全天'}</span>
-                    <span style={styles.actTitle}>{a.title}</span>
-                    {a.place && <span style={styles.actPlace}>{a.place}</span>}
+                <div key={a.id || j} style={styles.actCard}>
+                  <div style={styles.actTime}>{a.time || '全天'}</div>
+                  <div style={styles.actTitle}>{a.title}</div>
+                  {a.place && <div style={styles.actPlace}>{a.place}</div>}
+                  <div style={styles.actTags}>
                     <span style={styles.actType}>{a.type || '其他'}</span>
                     {a.cost != null && a.cost !== '' && !isNaN(parseFloat(a.cost)) && (
                       <span style={styles.actCost}>¥{parseFloat(a.cost)}</span>
                     )}
                     {a.remindBefore && (
-                      <span style={styles.remindBadge}>提前{a.remindBefore}分钟提醒</span>
+                      <span style={styles.remindBadge}>提前{a.remindBefore}分钟</span>
                     )}
                   </div>
                   {(a.photos || []).length > 0 && (
@@ -153,18 +153,24 @@ const styles = {
   },
   section: { fontSize: 15, marginBottom: 10 },
   text: { fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' },
-  day: { marginBottom: 16 },
-  dayDate: { fontWeight: 600, color: '#0d7377', marginBottom: 8 },
-  actItem: { padding: '6px 0' },
-  act: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 },
-  actTime: { minWidth: 50, color: '#666' },
-  actTitle: { fontWeight: 500 },
-  actPlace: { color: '#666', fontSize: 13 },
-  actType: { fontSize: 12, background: '#eee', padding: '2px 8px', borderRadius: 4 },
-  actCost: { color: '#0d7377', fontWeight: 500 },
-  remindBadge: { fontSize: 11, color: '#666', background: '#eee', padding: '2px 6px', borderRadius: 4 },
-  actPhotos: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  photoThumb: { width: 60, height: 60, objectFit: 'cover', borderRadius: 6 },
+  day: { marginBottom: 20 },
+  dayDate: { fontWeight: 600, color: '#0d7377', marginBottom: 12, fontSize: 16 },
+  actCard: {
+    background: '#f8f9fa',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 10,
+    border: '1px solid #e9ecef'
+  },
+  actTime: { fontSize: 15, color: '#0d7377', fontWeight: 600, marginBottom: 6 },
+  actTitle: { fontSize: 16, fontWeight: 600, marginBottom: 4 },
+  actPlace: { fontSize: 14, color: '#666', marginBottom: 8 },
+  actTags: { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  actType: { fontSize: 13, background: '#e9ecef', padding: '4px 10px', borderRadius: 6 },
+  actCost: { fontSize: 14, color: '#0d7377', fontWeight: 600 },
+  remindBadge: { fontSize: 12, color: '#666', background: '#e9ecef', padding: '4px 8px', borderRadius: 6 },
+  actPhotos: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  photoThumb: { width: 72, height: 72, objectFit: 'cover', borderRadius: 8 },
   budgetRow: { display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 14 },
   overBudget: { color: '#c00', fontWeight: 600 },
   aiBtn: { marginTop: 8, padding: '8px 16px', fontSize: 14 },

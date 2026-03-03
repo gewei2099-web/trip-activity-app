@@ -53,6 +53,8 @@ textarea { resize: vertical; min-height: 80px; }
 label { display: block; margin-bottom: 4px; font-weight: 500; color: #555; }
 .nav-drop-a:hover { background: #f0f0f0 !important; }
 
+/* 移动端优先：一加13等 ~412px 宽度，确保触摸目标≥44px */
 @media (max-width: 480px) {
-  html { font-size: 15px; }
+  html { font-size: 16px; }
+  input, select, textarea { font-size: 16px !important; } /* 防止 iOS 缩放 */
 }

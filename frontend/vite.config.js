@@ -4,9 +4,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const isPages = process.env.BUILD_PAGES === '1'
 const base = isPages ? '/trip-activity-app/' : './'
+const buildTime = new Date().toISOString().slice(0, 19).replace('T', ' ')
 
 export default defineConfig({
   base,
+  define: {
+    __BUILD_TIME__: JSON.stringify(buildTime)
+  },
   plugins: [
     react(),
     VitePWA({

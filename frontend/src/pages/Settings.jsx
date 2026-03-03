@@ -74,9 +74,15 @@ export default function Settings() {
     e.target.value = ''
   }
 
+  /* BUILD_TIME 由 vite define 在构建时注入 */
+  const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? String(__BUILD_TIME__) : ''
+
   return (
     <div style={styles.page}>
       <h1 style={styles.title}>设置</h1>
+      {buildTime && (
+        <div style={styles.version}>构建：{buildTime}</div>
+      )}
 
       <section style={styles.section}>
         <h2 style={styles.sectionTitle}>LLM 配置（可选）</h2>
@@ -159,6 +165,7 @@ export default function Settings() {
 const styles = {
   page: { padding: 16, paddingBottom: 80 },
   title: { fontSize: 22, marginBottom: 16, fontWeight: 600 },
+  version: { fontSize: 13, color: '#888', marginBottom: 12 },
   section: { marginBottom: 32 },
   sectionTitle: { fontSize: 16, marginBottom: 8 },
   hint: { fontSize: 14, color: '#666', marginBottom: 12 },

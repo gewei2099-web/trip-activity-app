@@ -236,78 +236,63 @@ export default function TripForm() {
         {days.length > 0 && (
           <div style={styles.section}>
             <h3 style={styles.sectionTitle}>日程安排</h3>
-            <p style={styles.sectionHint}>每个活动可填写标题、时间、地点等；地点可搜索自动填充坐标，也可手动修改</p>
+            <p style={styles.sectionHint}>填写每个活动的标题、时间、地点等</p>
             {days.map((day, dayIdx) => (
               <div key={day.date} style={styles.dayCard}>
                 <div style={styles.dayHeader}>{day.date}</div>
                 {(day.activities || []).map((a, actIdx) => (
                   <div key={a.id} style={styles.actBlock}>
-                    <div style={styles.actGrid}>
-                      <div style={styles.actField}>
-                        <label style={styles.actLabel}>活动标题</label>
-                        <input
-                          placeholder="如：参观故宫"
-                          value={a.title}
-                          onChange={e => updateActivity(dayIdx, actIdx, 'title', e.target.value)}
-                          style={styles.actInput}
-                        />
-                      </div>
-                      <div style={styles.actField}>
+                    <div style={styles.actField}>
+                      <label style={styles.actLabel}>活动标题</label>
+                      <input placeholder="如：参观故宫" value={a.title} onChange={e => updateActivity(dayIdx, actIdx, 'title', e.target.value)} style={styles.actInput} />
+                    </div>
+                    <div style={styles.actRow}>
+                      <div style={{ ...styles.actField, flex: 1, minWidth: 0 }}>
                         <label style={styles.actLabel}>类型</label>
                         <select value={a.type} onChange={e => updateActivity(dayIdx, actIdx, 'type', e.target.value)} style={styles.actInput}>
                           {ACTIVITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </div>
-                      <div style={styles.actField}>
-                        <label style={styles.actLabel}>时间（可选，时:分）</label>
-                        <input
-                          type="time"
-                          value={a.time || ''}
-                          onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)}
-                          style={styles.actInput}
-                          title="选择具体时间，如 09:30"
-                        />
+                      <div style={{ ...styles.actField, flex: 1, minWidth: 0 }}>
+                        <label style={styles.actLabel}>时间</label>
+                        <input type="time" value={a.time || ''} onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)} style={styles.actInput} />
                       </div>
-                      <div style={styles.actField}>
-                        <label style={styles.actLabel}>费用（元）</label>
+                      <div style={{ ...styles.actField, flex: 0.8, minWidth: 0 }}>
+                        <label style={styles.actLabel}>费用</label>
                         <input type="number" placeholder="0" value={a.cost ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'cost', e.target.value)} style={styles.actInput} />
                       </div>
                     </div>
-                    <div style={styles.actGrid}>
-                      <div style={styles.actField}>
-                        <label style={styles.actLabel}>地点</label>
-                        <div style={styles.placeRow}>
-                          <input placeholder="如：南京南站" value={a.place} onChange={e => updateActivity(dayIdx, actIdx, 'place', e.target.value)} style={{ ...styles.actInput, flex: 1 }} />
-                          <button type="button" onClick={() => handlePlaceSearch(dayIdx, actIdx)} disabled={placeSearching === `${dayIdx}-${actIdx}`} style={styles.searchBtn}>
-                            {placeSearching === `${dayIdx}-${actIdx}` ? '搜索中' : '选地点'}
-                          </button>
+                    <div style={styles.actField}>
+                      <label style={styles.actLabel}>地点</label>
+                      <div style={styles.placeRow}>
+                        <input placeholder="如：南京南站" value={a.place} onChange={e => updateActivity(dayIdx, actIdx, 'place', e.target.value)} style={styles.placeInput} />
+                        <button type="button" onClick={() => handlePlaceSearch(dayIdx, actIdx)} disabled={placeSearching === `${dayIdx}-${actIdx}`} style={styles.searchBtn}>
+                          {placeSearching === `${dayIdx}-${actIdx}` ? '搜索' : '选地点'}
+                        </button>
+                      </div>
+                      {placeResults.length > 0 && placeSearchTarget?.dayIdx === dayIdx && placeSearchTarget?.actIdx === actIdx && (
+                        <div style={styles.placeResults}>
+                          {placeResults.map((r, i) => (
+                            <button key={i} type="button" onClick={() => selectPlace(r)} style={styles.placeOpt}>{r.display}</button>
+                          ))}
                         </div>
-                        {placeResults.length > 0 && placeSearchTarget?.dayIdx === dayIdx && placeSearchTarget?.actIdx === actIdx && (
-                          <div style={styles.placeResults}>
-                            {placeResults.map((r, i) => (
-                              <button key={i} type="button" onClick={() => selectPlace(r)} style={styles.placeOpt}>
-                                {r.display}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                      )}
+                    </div>
+                    <div style={styles.actRow}>
+                      <div style={styles.actField}>
+                        <label style={styles.actLabel}>经度</label>
+                        <input type="number" step="any" placeholder="选地点填充" value={a.lat ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'lat', e.target.value)} style={styles.actInput} />
                       </div>
                       <div style={styles.actField}>
-                        <label style={styles.actLabel}>经度（可手动修改）</label>
-                        <input type="number" step="any" placeholder="选地点自动填充" value={a.lat ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'lat', e.target.value)} style={styles.actInput} />
-                      </div>
-                      <div style={styles.actField}>
-                        <label style={styles.actLabel}>纬度（可手动修改）</label>
-                        <input type="number" step="any" placeholder="选地点自动填充" value={a.lng ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'lng', e.target.value)} style={styles.actInput} />
+                        <label style={styles.actLabel}>纬度</label>
+                        <input type="number" step="any" placeholder="选地点填充" value={a.lng ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'lng', e.target.value)} style={styles.actInput} />
                       </div>
                     </div>
-                    <div style={styles.actGrid}>
-                      <div style={styles.actField}>
-                        <label style={styles.actLabel}>闹钟提醒（可选）</label>
-                        <select value={a.remindBefore ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'remindBefore', e.target.value)} style={styles.actInput}>
-                          {REMIND_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      </div>
+                    <div style={styles.actField}>
+                      <label style={styles.actLabel}>闹钟</label>
+                      <select value={a.remindBefore ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'remindBefore', e.target.value)} style={styles.actInput}>
+                        {REMIND_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
                     </div>
                     <div style={styles.actField}>
                       <label style={styles.actLabel}>图片</label>
@@ -318,12 +303,12 @@ export default function TripForm() {
                             <button type="button" onClick={() => removePhoto(dayIdx, actIdx, pi)} style={styles.photoDel}>×</button>
                           </div>
                         ))}
-                        <button type="button" onClick={() => document.getElementById(`photo-${dayIdx}-${actIdx}`)?.click()} style={styles.addPhoto}>+ 添加图片</button>
+                        <button type="button" onClick={() => document.getElementById(`photo-${dayIdx}-${actIdx}`)?.click()} style={styles.addPhoto}>+ 添加</button>
                         <input id={`photo-${dayIdx}-${actIdx}`} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => addPhoto(dayIdx, actIdx, e)} />
                       </div>
                     </div>
                     {(day.activities || []).length > 1 && (
-                      <button type="button" onClick={() => removeActivity(dayIdx, actIdx)} className="danger" style={styles.delBtn}>删除活动</button>
+                      <button type="button" onClick={() => removeActivity(dayIdx, actIdx)} className="danger" style={styles.delBtn}>删除</button>
                     )}
                   </div>
                 ))}
@@ -347,34 +332,35 @@ export default function TripForm() {
 }
 
 const styles = {
-  page: { padding: 16, paddingBottom: 80 },
-  title: { fontSize: 22, marginBottom: 16, fontWeight: 600 },
+  page: { padding: 16, paddingBottom: 100 },
+  title: { fontSize: 20, marginBottom: 18, fontWeight: 600 },
   field: { marginBottom: 16 },
-  row: { display: 'flex', gap: 12 },
+  row: { display: 'flex', gap: 12, flexWrap: 'wrap' },
   section: { marginTop: 24 },
   sectionTitle: { marginBottom: 8, fontSize: 16 },
   sectionHint: { fontSize: 13, color: '#666', marginBottom: 12 },
-  dayCard: { background: '#fff', padding: 16, borderRadius: 10, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
-  dayHeader: { fontWeight: 600, marginBottom: 12, color: '#0d7377', fontSize: 15 },
-  actBlock: { marginBottom: 16, padding: 12, background: '#f9fafb', borderRadius: 8, border: '1px solid #eee' },
-  actGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 12 },
-  actField: { minWidth: 0 },
-  actLabel: { display: 'block', fontSize: 12, color: '#666', marginBottom: 4 },
-  actInput: { width: '100%', padding: '8px 10px', fontSize: 14, borderRadius: 6, border: '1px solid #ddd', boxSizing: 'border-box' },
-  placeRow: { display: 'flex', gap: 8 },
-  searchBtn: { padding: '8px 12px', fontSize: 13, whiteSpace: 'nowrap' },
-  placeResults: { marginTop: 6, border: '1px solid #ddd', borderRadius: 6, background: '#fff', maxHeight: 150, overflow: 'auto' },
-  placeOpt: { display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13 },
-  photoRow: { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  dayCard: { background: '#f8f9fa', padding: 16, borderRadius: 12, marginBottom: 20, border: '1px solid #e9ecef' },
+  dayHeader: { fontWeight: 600, marginBottom: 14, color: '#0d7377', fontSize: 16 },
+  actBlock: { marginBottom: 18, padding: 14, background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' },
+  actField: { marginBottom: 12 },
+  actRow: { display: 'flex', gap: 10, marginBottom: 12 },
+  actLabel: { display: 'block', fontSize: 13, color: '#555', marginBottom: 6, fontWeight: 500 },
+  actInput: { width: '100%', padding: '12px 14px', fontSize: 16, borderRadius: 8, border: '1px solid #ddd', boxSizing: 'border-box', minHeight: 44 },
+  placeRow: { display: 'flex', gap: 10 },
+  placeInput: { flex: 1, minWidth: 0, padding: '12px 14px', fontSize: 16, borderRadius: 8, border: '1px solid #ddd', minHeight: 44 },
+  searchBtn: { padding: '12px 16px', fontSize: 15, whiteSpace: 'nowrap', minHeight: 44 },
+  placeResults: { marginTop: 8, border: '1px solid #ddd', borderRadius: 8, background: '#fff', maxHeight: 160, overflow: 'auto' },
+  placeOpt: { display: 'block', width: '100%', padding: '14px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, color: '#333', minHeight: 44 },
+  photoRow: { display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
   photoWrap: { position: 'relative' },
-  photoThumb: { width: 48, height: 48, objectFit: 'cover', borderRadius: 6 },
-  photoDel: { position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: '#c00', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12 },
-  addPhoto: { padding: '12px 16px', display: 'flex', alignItems: 'center', border: '1px dashed #ccc', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13 },
+  photoThumb: { width: 72, height: 72, objectFit: 'cover', borderRadius: 8 },
+  photoDel: { position: 'absolute', top: -6, right: -6, width: 24, height: 24, borderRadius: '50%', background: '#c00', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14 },
+  addPhoto: { padding: '14px 18px', minHeight: 44, display: 'flex', alignItems: 'center', border: '1px dashed #ccc', borderRadius: 8, background: '#fafafa', cursor: 'pointer', fontSize: 15 },
   aiBtn: { marginTop: 8, padding: '8px 16px', fontSize: 14 },
   aiResult: { marginTop: 8, padding: 12, background: '#f5f5f5', borderRadius: 8 },
   aiText: { whiteSpace: 'pre-wrap', fontSize: 14, margin: '0 0 8px 0' },
   aiApply: { padding: '6px 12px', fontSize: 13 },
-  delBtn: { marginTop: 8, padding: '8px 12px', fontSize: 12 },
-  addBtn: { marginTop: 4, padding: '8px 12px', fontSize: 13 },
-  submit: { width: '100%', padding: 14, marginTop: 16 }
+  delBtn: { marginTop: 10, padding: '12px 16px', fontSize: 14, minHeight: 44 },
+  addBtn: { marginTop: 8, padding: '14px 18px', fontSize: 15, minHeight: 44 },
+  submit: { width: '100%', padding: 16, marginTop: 20, fontSize: 16, minHeight: 48 }
 }
