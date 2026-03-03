@@ -349,6 +349,7 @@ export default function TripForm() {
           onSelect={handleMapPickerSelect}
           initialLat={days[mapPickerTarget?.dayIdx]?.activities?.[mapPickerTarget?.actIdx]?.lat}
           initialLng={days[mapPickerTarget?.dayIdx]?.activities?.[mapPickerTarget?.actIdx]?.lng}
+          initialPlace={days[mapPickerTarget?.dayIdx]?.activities?.[mapPickerTarget?.actIdx]?.place}
         />
       )}
     </div>

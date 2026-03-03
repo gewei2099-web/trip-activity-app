@@ -188,6 +188,7 @@ export default function ActivityForm() {
         onSelect={handleMapPickerSelect}
         initialLat={form.lat}
         initialLng={form.lng}
+        initialPlace={form.place}
       />
     </div>
   )

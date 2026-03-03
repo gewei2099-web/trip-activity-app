@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react'
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import React, { useState, useCallback, useEffect } from 'react'
+import { MapContainer, TileLayer, Marker, CircleMarker, Popup, useMapEvents } from 'react-leaflet'
 import { reverseGeocode } from '../utils/geocode'
 import { MAP_TILES, DEFAULT_TILE } from '../utils/mapTiles'
 import L from 'leaflet'
@@ -19,14 +19,43 @@ function MapClickHandler({ onPoint }) {
   return null
 }
 
-export default function MapPicker({ open, onClose, onSelect, initialLat, initialLng }) {
-  const center = (initialLat != null && initialLng != null && !isNaN(parseFloat(initialLat)) && !isNaN(parseFloat(initialLng)))
-    ? [parseFloat(initialLat), parseFloat(initialLng)]
-    : [39.9, 116.4]
+export default function MapPicker({ open, onClose, onSelect, initialLat, initialLng, initialPlace }) {
+  const hasInitial = initialLat != null && initialLng != null && !isNaN(parseFloat(initialLat)) && !isNaN(parseFloat(initialLng))
+  const center = hasInitial ? [parseFloat(initialLat), parseFloat(initialLng)] : [39.9, 116.4]
 
   const [pos, setPos] = useState(null)
   const [place, setPlace] = useState('')
   const [loading, setLoading] = useState(false)
+  const [currentLoc, setCurrentLoc] = useState(null)
+
+  // 打开时获取当前位置
+  useEffect(() => {
+    if (!open || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (p) => setCurrentLoc([p.coords.latitude, p.coords.longitude]),
+      () => {},
+      { enableHighAccuracy: false, timeout: 5000 }
+    )
+  }, [open])
+
+  // 若有已选地点（文字搜索所得），显示为已选并预填
+  useEffect(() => {
+    if (open && hasInitial) {
+      const [lat, lng] = [parseFloat(initialLat), parseFloat(initialLng)]
+      setPos([lat, lng])
+      setPlace(initialPlace || '')
+      if (!initialPlace) {
+        setLoading(true)
+        reverseGeocode(lat, lng).then((name) => {
+          setPlace(name || '')
+          setLoading(false)
+        }).catch(() => setLoading(false))
+      }
+    } else if (!open) {
+      setPos(null)
+      setPlace('')
+    }
+  }, [open, hasInitial, initialLat, initialLng, initialPlace])
 
   const handlePoint = useCallback(async (latlng) => {
     const { lat, lng } = latlng
@@ -51,6 +80,7 @@ export default function MapPicker({ open, onClose, onSelect, initialLat, initial
     setPos(null)
     setPlace('')
     setLoading(false)
+    setCurrentLoc(null)
     onClose()
   }, [onClose])
 
@@ -75,6 +105,11 @@ export default function MapPicker({ open, onClose, onSelect, initialLat, initial
               url={MAP_TILES[DEFAULT_TILE].url}
               maxZoom={MAP_TILES[DEFAULT_TILE].maxZoom}
             />
+            {currentLoc && (
+              <CircleMarker center={currentLoc} radius={8} pathOptions={{ color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.8, weight: 2 }}>
+                <Popup>当前位置</Popup>
+              </CircleMarker>
+            )}
             {pos && <Marker position={pos} />}
             <MapClickHandler onPoint={handlePoint} />
           </MapContainer>
