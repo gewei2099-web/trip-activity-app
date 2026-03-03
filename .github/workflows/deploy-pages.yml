@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
 
 permissions:
   contents: read
@@ -16,6 +16,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,8 +34,11 @@ jobs:
           npm ci
           BUILD_PAGES=1 npx vite build --outDir ../docs
 
-      - uses: actions/upload-pages-artifact@3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
         with:
           path: docs
 
-      - uses: actions/deploy-pages@4
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
