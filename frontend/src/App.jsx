@@ -31,7 +31,7 @@ function Nav() {
         <Link to="/activity/new" style={styles.navA}>活动</Link>
         <div style={styles.moreWrap}>
           <button type="button" onClick={() => setOpen(o => !o)} style={styles.moreBtn}>
-            更多 ▾
+            更多 <span style={styles.moreArrow} />
           </button>
           {open && (
             <div style={styles.dropdown}>
@@ -95,7 +95,18 @@ const styles = {
     color: 'rgba(255,255,255,0.9)',
     cursor: 'pointer',
     fontSize: 14,
-    padding: 0
+    padding: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4
+  },
+  moreArrow: {
+    display: 'inline-block',
+    width: 0,
+    height: 0,
+    borderLeft: '4px solid transparent',
+    borderRight: '4px solid transparent',
+    borderTop: '5px solid currentColor'
   },
   dropdown: {
     position: 'absolute',

@@ -108,8 +108,8 @@ export default function ActivityForm() {
         </div>
         <div style={styles.row}>
           <div style={styles.field}>
-            <label>时间（可选）</label>
-            <input type="time" value={form.time || ''} onChange={e => update('time', e.target.value)} />
+            <label>时间（可选，时:分）</label>
+            <input type="time" value={form.time || ''} onChange={e => update('time', e.target.value)} title="选择具体时间，如 14:30" />
           </div>
           <div style={styles.field}>
             <label>类型</label>

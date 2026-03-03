@@ -259,12 +259,13 @@ export default function TripForm() {
                         </select>
                       </div>
                       <div style={styles.actField}>
-                        <label style={styles.actLabel}>时间（可选）</label>
+                        <label style={styles.actLabel}>时间（可选，时:分）</label>
                         <input
                           type="time"
                           value={a.time || ''}
                           onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)}
                           style={styles.actInput}
+                          title="选择具体时间，如 09:30"
                         />
                       </div>
                       <div style={styles.actField}>
