@@ -42,8 +42,10 @@ export default function DateSelect({ value, onChange, style = {}, min, max }) {
       const maxD = daysInMonth(yy, mm)
       const dNum = parseInt(dd, 10) || 1
       if (dNum > maxD) dd = String(maxD).padStart(2, '0')
-      if (dd) onChange(`${yy}-${mm}-${dd}`)
-      else onChange(`${yy}-${mm}-01`)
+      onChange(dd ? `${yy}-${mm}-${dd}` : `${yy}-${mm}-01`)
+    } else if (yy) {
+      // 仅选年份时先填 01-01，支持新建时从空白开始逐步选择
+      onChange(`${yy}-01-01`)
     } else {
       onChange('')
     }
