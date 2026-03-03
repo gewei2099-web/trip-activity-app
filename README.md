@@ -59,43 +59,46 @@ npm run dev
 
 ---
 
-## 部署（一次）
+## 部署
 
-将前端构建为静态文件，托管到任意支持静态网站的免费服务：
-
-### 方式一：GitHub Pages
+### 方式一：GitHub Pages（推荐，push 即部署）
 
 **前提**：项目已推送到 GitHub，仓库名为 `trip-activity-app`。
 
-**步骤 1**：构建（会自动输出到项目根目录的 `docs/`）
+**步骤 1**：开启 Pages 并选择 Actions 部署
+
+在仓库 **Settings → Pages**：
+- Source 选 **GitHub Actions**
+
+**步骤 2**：推送即部署
+
+之后每次 `git push` 到 `main` 分支，GitHub Actions 会自动构建并部署。无需手动 build。
+
+```bash
+git add .
+git commit -m "更新"
+git push
+```
+
+1～2 分钟后访问 `https://你的用户名.github.io/trip-activity-app/`。
+
+---
+
+### 方式二：手动构建后推送（备用）
+
+若暂未使用 GitHub Actions，可手动构建并提交 `docs/`：
 
 ```bash
 cd frontend
 npm install
 npm run build:pages
-```
-
-`build:pages` 会使用 `base: '/trip-activity-app/'` 和 `outDir: ../docs`。若仓库名不同，可改为：
-`npx vite build --base /你的仓库名/ --outDir ../docs`
-
-**步骤 2**：推送并开启 Pages
-
-确保在**项目根目录** `trip-activity-app/` 下执行（不是 frontend 里）：
-
-```bash
-cd D:\Program\JetBrains\PycharmProjects\agent_lab\trip-activity-app
+cd ..
 git add docs
 git commit -m "deploy"
 git push
 ```
 
-然后在仓库 **Settings → Pages**：Source 选 **Deploy from a branch**，Branch 选 `main`，Folder 选 **`/docs`**。
-
-等待 1～2 分钟后，访问 `https://你的用户名.github.io/trip-activity-app/`。
-
----
-
-**个人主页**（`https://用户名.github.io/` 根路径）：用 `npx vite build --base / --outDir ../docs` 代替 `build:pages`。
+仓库 **Settings → Pages**：Source 选 **Deploy from a branch**，Branch 选 `main`，Folder 选 **`/docs`**。
 
 ### 方式二：Vercel / Netlify
 

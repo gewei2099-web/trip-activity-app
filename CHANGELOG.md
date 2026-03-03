@@ -4,6 +4,20 @@
 
 ---
 
+## [2025-03-03] 版本时间为北京时间
+
+- 设置页构建时间改为北京时间（UTC+8）显示，并标注「北京」
+
+## [2025-03-03] 时间选择与地点搜索修复
+
+- **时间选择**：改用「时」+「分」两个下拉框，替代 `type="time"`，解决部分手机无确定按钮的问题
+- **地点搜索**：Nominatim 失败时自动改用 Photon API，并优化错误提示（建议手动输入经纬度）
+
+## [2025-03-03] GitHub Actions 自动部署
+
+- 新增 `.github/workflows/deploy-pages.yml`，push 到 main 自动构建并部署到 GitHub Pages
+- 需在仓库 Settings → Pages 将 Source 改为 **GitHub Actions**
+
 ## [2025-03-03] 版本提示与移动端日程
 
 - **版本提示**：设置页显示构建时间（由 vite define 注入），便于确认部署是否更新

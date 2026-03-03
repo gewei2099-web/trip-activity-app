@@ -1,0 +1,38 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build
+        run: |
+          cd frontend
+          npm ci
+          BUILD_PAGES=1 npx vite build --outDir ../docs
+
+      - uses: actions/upload-pages-artifact@3
+        with:
+          path: docs
+
+      - uses: actions/deploy-pages@4

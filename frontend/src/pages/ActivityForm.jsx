@@ -5,6 +5,7 @@ import { uuid } from '../utils/uuid'
 import { ACTIVITY_TYPES } from '../utils/constants'
 import { readAsBase64 } from '../utils/image'
 import { searchPlace } from '../utils/geocode'
+import TimeSelect from '../components/TimeSelect'
 
 export default function ActivityForm() {
   const { id } = useParams()
@@ -49,7 +50,7 @@ export default function ActivityForm() {
       setPlaceResults(list)
       if (list.length === 0) alert('未找到匹配地点')
     } catch (err) {
-      alert('搜索失败: ' + err.message)
+      alert(err.message || '搜索失败')
     } finally {
       setPlaceSearching(false)
     }
@@ -108,8 +109,8 @@ export default function ActivityForm() {
         </div>
         <div style={styles.row}>
           <div style={styles.field}>
-            <label>时间（可选，时:分）</label>
-            <input type="time" value={form.time || ''} onChange={e => update('time', e.target.value)} title="选择具体时间，如 14:30" />
+            <label>时间（可选）</label>
+            <TimeSelect value={form.time || ''} onChange={v => update('time', v)} />
           </div>
           <div style={styles.field}>
             <label>类型</label>

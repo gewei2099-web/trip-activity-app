@@ -6,6 +6,7 @@ import { TRIP_TYPES, ACTIVITY_TYPES } from '../utils/constants'
 import { readAsBase64 } from '../utils/image'
 import { callLLM } from '../utils/llm'
 import { searchPlace } from '../utils/geocode'
+import TimeSelect from '../components/TimeSelect'
 
 function emptyActivity() {
   return { id: uuid(), title: '', time: '', place: '', type: '景点', memo: '', cost: '', lat: undefined, lng: undefined, photos: [], remindBefore: '' }
@@ -146,7 +147,7 @@ export default function TripForm() {
       setPlaceResults(list)
       if (list.length === 0) alert('未找到匹配地点')
     } catch (err) {
-      alert('搜索失败: ' + err.message)
+      alert(err.message || '搜索失败')
     } finally {
       setPlaceSearching(null)
     }
@@ -255,7 +256,7 @@ export default function TripForm() {
                       </div>
                       <div style={{ ...styles.actField, flex: 1, minWidth: 0 }}>
                         <label style={styles.actLabel}>时间</label>
-                        <input type="time" value={a.time || ''} onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)} style={styles.actInput} />
+                        <TimeSelect value={a.time || ''} onChange={v => updateActivity(dayIdx, actIdx, 'time', v)} />
                       </div>
                       <div style={{ ...styles.actField, flex: 0.8, minWidth: 0 }}>
                         <label style={styles.actLabel}>费用</label>
@@ -345,7 +346,7 @@ const styles = {
   actField: { marginBottom: 12 },
   actRow: { display: 'flex', gap: 10, marginBottom: 12 },
   actLabel: { display: 'block', fontSize: 13, color: '#555', marginBottom: 6, fontWeight: 500 },
-  actInput: { width: '100%', padding: '12px 14px', fontSize: 16, borderRadius: 8, border: '1px solid #ddd', boxSizing: 'border-box', minHeight: 44 },
+  actInput: { width: '100%', padding: '12px 14px', fontSize: 16, borderRadius: 8, border: '1px solid #ddd', boxSizing: 'border-box', minHeight: 44, background: '#fff' },
   placeRow: { display: 'flex', gap: 10 },
   placeInput: { flex: 1, minWidth: 0, padding: '12px 14px', fontSize: 16, borderRadius: 8, border: '1px solid #ddd', minHeight: 44 },
   searchBtn: { padding: '12px 16px', fontSize: 15, whiteSpace: 'nowrap', minHeight: 44 },
