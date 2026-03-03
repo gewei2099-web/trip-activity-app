@@ -68,17 +68,21 @@ npm run dev
 **步骤 1**：开启 Pages 并选择 Actions 部署
 
 在仓库 **Settings → Pages**：
-- Source 选 **GitHub Actions**
+- **Build and deployment** → **Source** 选 **GitHub Actions**（不要选 Jekyll 或 Static HTML 模板）
 
-**步骤 2**：推送即部署
+**步骤 2**：确认工作流已推送
 
-之后每次 `git push` 到 `main` 分支，GitHub Actions 会自动构建并部署。无需手动 build。
+确保 `.github/workflows/deploy-pages.yml` 已提交并 push：
 
 ```bash
-git add .
-git commit -m "更新"
+git add .github/
+git commit -m "add deploy workflow"
 git push
 ```
+
+**步骤 3**：验证部署
+
+推送后打开仓库 **Actions** 标签页，应看到「Deploy to GitHub Pages」工作流在运行。若失败可点进去查看日志。
 
 1～2 分钟后访问 `https://你的用户名.github.io/trip-activity-app/`。
 

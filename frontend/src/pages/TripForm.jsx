@@ -7,6 +7,7 @@ import { readAsBase64 } from '../utils/image'
 import { callLLM } from '../utils/llm'
 import { searchPlace } from '../utils/geocode'
 import TimeSelect from '../components/TimeSelect'
+import MapPicker from '../components/MapPicker'
 
 function emptyActivity() {
   return { id: uuid(), title: '', time: '', place: '', type: '景点', memo: '', cost: '', lat: undefined, lng: undefined, photos: [], remindBefore: '' }
@@ -65,6 +66,7 @@ export default function TripForm() {
   const [placeSearching, setPlaceSearching] = useState(null)
   const [placeResults, setPlaceResults] = useState([])
   const [placeSearchTarget, setPlaceSearchTarget] = useState(null)
+  const [mapPickerTarget, setMapPickerTarget] = useState(null)
 
   const update = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -160,6 +162,15 @@ export default function TripForm() {
     updateActivity(dayIdx, actIdx, 'lng', item.lng)
     setPlaceResults([])
     setPlaceSearchTarget(null)
+  }
+
+  const handleMapPickerSelect = ({ lat, lng, place }) => {
+    if (!mapPickerTarget) return
+    const { dayIdx, actIdx } = mapPickerTarget
+    updateActivity(dayIdx, actIdx, 'lat', lat)
+    updateActivity(dayIdx, actIdx, 'lng', lng)
+    if (place) updateActivity(dayIdx, actIdx, 'place', place)
+    setMapPickerTarget(null)
   }
 
   const REMIND_OPTIONS = [
@@ -268,7 +279,10 @@ export default function TripForm() {
                       <div style={styles.placeRow}>
                         <input placeholder="如：南京南站" value={a.place} onChange={e => updateActivity(dayIdx, actIdx, 'place', e.target.value)} style={styles.placeInput} />
                         <button type="button" onClick={() => handlePlaceSearch(dayIdx, actIdx)} disabled={placeSearching === `${dayIdx}-${actIdx}`} style={styles.searchBtn}>
-                          {placeSearching === `${dayIdx}-${actIdx}` ? '搜索' : '选地点'}
+                          {placeSearching === `${dayIdx}-${actIdx}` ? '…' : '选地点'}
+                        </button>
+                        <button type="button" onClick={() => setMapPickerTarget({ dayIdx, actIdx })} style={styles.mapBtn}>
+                          地图选点
                         </button>
                       </div>
                       {placeResults.length > 0 && placeSearchTarget?.dayIdx === dayIdx && placeSearchTarget?.actIdx === actIdx && (
@@ -328,6 +342,15 @@ export default function TripForm() {
 
         <button type="submit" style={styles.submit}>保存</button>
       </form>
+      {mapPickerTarget && (
+        <MapPicker
+          open={!!mapPickerTarget}
+          onClose={() => setMapPickerTarget(null)}
+          onSelect={handleMapPickerSelect}
+          initialLat={days[mapPickerTarget?.dayIdx]?.activities?.[mapPickerTarget?.actIdx]?.lat}
+          initialLng={days[mapPickerTarget?.dayIdx]?.activities?.[mapPickerTarget?.actIdx]?.lng}
+        />
+      )}
     </div>
   )
 }
@@ -350,6 +373,7 @@ const styles = {
   placeRow: { display: 'flex', gap: 10 },
   placeInput: { flex: 1, minWidth: 0, padding: '12px 14px', fontSize: 16, borderRadius: 8, border: '1px solid #ddd', minHeight: 44 },
   searchBtn: { padding: '12px 16px', fontSize: 15, whiteSpace: 'nowrap', minHeight: 44 },
+  mapBtn: { padding: '12px 16px', fontSize: 14, whiteSpace: 'nowrap', minHeight: 44 },
   placeResults: { marginTop: 8, border: '1px solid #ddd', borderRadius: 8, background: '#fff', maxHeight: 160, overflow: 'auto' },
   placeOpt: { display: 'block', width: '100%', padding: '14px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, color: '#333', minHeight: 44 },
   photoRow: { display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' },

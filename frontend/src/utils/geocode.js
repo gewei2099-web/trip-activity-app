@@ -46,5 +46,23 @@ export async function searchPlace(query, limit = 5) {
     }
   } catch (_) {}
 
-  throw new Error('地点搜索失败，可能是网络限制。请手动输入经度纬度')
+  throw new Error('地点搜索失败，可能是网络限制。请点击「地图选点」在地图上选位置')
+}
+
+export async function reverseGeocode(lat, lng) {
+  try {
+    const params = new URLSearchParams({
+      lat: String(lat),
+      lon: String(lng),
+      format: 'json'
+    })
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, {
+      headers: { 'User-Agent': 'TripActivityApp/1.0' }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      return data.display_name || ''
+    }
+  } catch (_) {}
+  return ''
 }

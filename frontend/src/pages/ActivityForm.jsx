@@ -6,6 +6,7 @@ import { ACTIVITY_TYPES } from '../utils/constants'
 import { readAsBase64 } from '../utils/image'
 import { searchPlace } from '../utils/geocode'
 import TimeSelect from '../components/TimeSelect'
+import MapPicker from '../components/MapPicker'
 
 export default function ActivityForm() {
   const { id } = useParams()
@@ -37,6 +38,7 @@ export default function ActivityForm() {
   const update = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
   const [placeSearching, setPlaceSearching] = useState(false)
   const [placeResults, setPlaceResults] = useState([])
+  const [mapPickerOpen, setMapPickerOpen] = useState(false)
 
   const handlePlaceSearch = async () => {
     if (!form.place?.trim() || form.place.length < 2) {
@@ -60,6 +62,13 @@ export default function ActivityForm() {
     update('lat', item.lat)
     update('lng', item.lng)
     setPlaceResults([])
+  }
+
+  const handleMapPickerSelect = ({ lat, lng, place }) => {
+    update('lat', lat)
+    update('lng', lng)
+    if (place) update('place', place)
+    setMapPickerOpen(false)
   }
 
   const REMIND_OPTIONS = [
@@ -123,7 +132,8 @@ export default function ActivityForm() {
           <label>地点</label>
           <div style={styles.placeRow}>
             <input value={form.place} onChange={e => update('place', e.target.value)} placeholder="如：南京南站" style={{ flex: 1 }} />
-            <button type="button" onClick={handlePlaceSearch} disabled={placeSearching}>{placeSearching ? '搜索中' : '选地点'}</button>
+            <button type="button" onClick={handlePlaceSearch} disabled={placeSearching}>{placeSearching ? '…' : '选地点'}</button>
+            <button type="button" onClick={() => setMapPickerOpen(true)}>地图选点</button>
           </div>
           {placeResults.length > 0 && (
             <div style={styles.placeResults}>
@@ -172,6 +182,13 @@ export default function ActivityForm() {
         </div>
         <button type="submit" style={styles.submit}>保存</button>
       </form>
+      <MapPicker
+        open={mapPickerOpen}
+        onClose={() => setMapPickerOpen(false)}
+        onSelect={handleMapPickerSelect}
+        initialLat={form.lat}
+        initialLng={form.lng}
+      />
     </div>
   )
 }

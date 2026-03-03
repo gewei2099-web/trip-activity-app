@@ -16,23 +16,30 @@ export default function TimeSelect({ value, onChange, style = {} }) {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 6, ...style }}>
-      <select
-        value={hour}
-        onChange={e => handleChange(e.target.value, minute)}
-        style={{ flex: 1 }}
-      >
-        <option value="">时</option>
-        {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
-      </select>
-      <select
-        value={minute}
-        onChange={e => handleChange(hour, e.target.value)}
-        style={{ flex: 1 }}
-      >
-        <option value="">分</option>
-        {MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
-      </select>
+    <div style={{ ...style }}>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <select
+          value={hour}
+          onChange={e => handleChange(e.target.value, minute)}
+          style={{ flex: 1 }}
+        >
+          <option value="">时</option>
+          {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+        </select>
+        <select
+          value={minute}
+          onChange={e => handleChange(hour, e.target.value)}
+          style={{ flex: 1 }}
+        >
+          <option value="">分</option>
+          {MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+      {value && (
+        <div style={{ marginTop: 6, fontSize: 15, fontWeight: 600, color: '#0d7377' }}>
+          已选：{value}
+        </div>
+      )}
     </div>
   )
 }
