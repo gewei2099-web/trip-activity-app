@@ -1,6 +1,9 @@
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
 const PHOTON_URL = 'https://photon.komoot.io/api/'
 
+// 国内外均优先中文
+const LANG_HEADER = { 'Accept-Language': 'zh-CN,zh' }
+
 function formatNominatim(data) {
   return data.map(item => ({
     display: item.display_name,
@@ -27,9 +30,9 @@ export async function searchPlace(query, limit = 5) {
   const q = query.trim()
 
   try {
-    const params = new URLSearchParams({ q, format: 'json', limit: String(limit) })
+    const params = new URLSearchParams({ q, format: 'json', limit: String(limit), 'accept-language': 'zh-CN,zh' })
     const res = await fetch(`${NOMINATIM_URL}?${params}`, {
-      headers: { 'User-Agent': 'TripActivityApp/1.0' }
+      headers: { 'User-Agent': 'TripActivityApp/1.0', ...LANG_HEADER }
     })
     if (res.ok) {
       const data = await res.json()
@@ -39,7 +42,9 @@ export async function searchPlace(query, limit = 5) {
 
   try {
     const params = new URLSearchParams({ q, limit: String(limit) })
-    const res = await fetch(`${PHOTON_URL}?${params}`)
+    const res = await fetch(`${PHOTON_URL}?${params}`, {
+      headers: { 'User-Agent': 'TripActivityApp/1.0', ...LANG_HEADER }
+    })
     if (res.ok) {
       const data = await res.json()
       return formatPhoton(data)
@@ -54,10 +59,11 @@ export async function reverseGeocode(lat, lng) {
     const params = new URLSearchParams({
       lat: String(lat),
       lon: String(lng),
-      format: 'json'
+      format: 'json',
+      'accept-language': 'zh-CN,zh'
     })
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, {
-      headers: { 'User-Agent': 'TripActivityApp/1.0' }
+      headers: { 'User-Agent': 'TripActivityApp/1.0', ...LANG_HEADER }
     })
     if (res.ok) {
       const data = await res.json()

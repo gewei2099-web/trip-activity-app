@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import { getTrips, getStandaloneActivities } from '../utils/storage'
+import { MAP_TILES, DEFAULT_TILE } from '../utils/mapTiles'
 import L from 'leaflet'
 
 // 修复 Leaflet 默认图标在 vite 下的路径问题
@@ -65,8 +66,9 @@ export default function MapView() {
           scrollWheelZoom={true}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution={MAP_TILES[DEFAULT_TILE].attribution}
+            url={MAP_TILES[DEFAULT_TILE].url}
+            maxZoom={MAP_TILES[DEFAULT_TILE].maxZoom}
           />
           {markers.map((m, i) => (
             <Marker key={i} position={[m.lat, m.lng]}>

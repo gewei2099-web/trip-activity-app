@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import { reverseGeocode } from '../utils/geocode'
+import { MAP_TILES, DEFAULT_TILE } from '../utils/mapTiles'
 import L from 'leaflet'
 
 // 复用 MapView 的图标修复
@@ -70,8 +71,9 @@ export default function MapPicker({ open, onClose, onSelect, initialLat, initial
             scrollWheelZoom={true}
           >
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution={MAP_TILES[DEFAULT_TILE].attribution}
+              url={MAP_TILES[DEFAULT_TILE].url}
+              maxZoom={MAP_TILES[DEFAULT_TILE].maxZoom}
             />
             {pos && <Marker position={pos} />}
             <MapClickHandler onPoint={handlePoint} />
