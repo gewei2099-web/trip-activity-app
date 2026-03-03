@@ -57,6 +57,7 @@ export default function TripList() {
                       {a.date} {a.place ? `· ${a.place}` : ''}
                     </div>
                   </Link>
+                  <Link to={`/activity/${a.id}/edit`} style={styles.editBtn}>编辑</Link>
                   <button
                     type="button"
                     onClick={e => handleDeleteActivity(a.id, e)}
@@ -91,6 +92,7 @@ const styles = {
     boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
   },
   link: { flex: 1 },
+  editBtn: { padding: '8px 12px', fontSize: 13, color: '#0d7377', textDecoration: 'underline' },
   name: { fontWeight: 600, marginBottom: 4 },
   meta: { fontSize: 13, color: '#666' },
   delBtn: { padding: '8px 12px', fontSize: 13 }

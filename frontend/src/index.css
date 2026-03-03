@@ -36,6 +36,8 @@ input, textarea, select {
 }
 textarea { resize: vertical; min-height: 80px; }
 label { display: block; margin-bottom: 4px; font-weight: 500; color: #555; }
+.nav-drop-a:hover { background: #f0f0f0 !important; }
+
 @media (max-width: 480px) {
   html { font-size: 15px; }
 }

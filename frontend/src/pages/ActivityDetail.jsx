@@ -28,6 +28,7 @@ export default function ActivityDetail() {
         {activity.time && <span>{activity.time}</span>}
         {activity.type && <span>{activity.type}</span>}
         {activity.cost && <span>¥{activity.cost}</span>}
+        {activity.remindBefore && <span style={styles.remindBadge}>提前{activity.remindBefore}分钟提醒</span>}
       </div>
 
       {activity.place && (
@@ -41,6 +42,17 @@ export default function ActivityDetail() {
         <div style={styles.card}>
           <div style={styles.label}>备注</div>
           <p style={styles.text}>{activity.memo}</p>
+        </div>
+      )}
+
+      {(activity.photos || []).length > 0 && (
+        <div style={styles.card}>
+          <div style={styles.label}>图片</div>
+          <div style={styles.photoGrid}>
+            {activity.photos.map((p, i) => (
+              <img key={i} src={p} alt="" style={styles.photoThumb} />
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -62,5 +74,8 @@ const styles = {
     boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
   },
   label: { fontSize: 13, color: '#666', marginBottom: 8 },
-  text: { fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }
+  remindBadge: { fontSize: 12, color: '#666', background: '#eee', padding: '2px 8px', borderRadius: 4 },
+  text: { fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' },
+  photoGrid: { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  photoThumb: { width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }
 }

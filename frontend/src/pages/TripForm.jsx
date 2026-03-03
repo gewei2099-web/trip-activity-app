@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { saveTrip, getTripById } from '../utils/storage'
 import { uuid } from '../utils/uuid'
 import { TRIP_TYPES, ACTIVITY_TYPES } from '../utils/constants'
+import { readAsBase64 } from '../utils/image'
+import { callLLM } from '../utils/llm'
+import { searchPlace } from '../utils/geocode'
 
 function emptyActivity() {
-  return { id: uuid(), title: '', time: '', place: '', type: '景点', memo: '', cost: '' }
+  return { id: uuid(), title: '', time: '', place: '', type: '景点', memo: '', cost: '', lat: undefined, lng: undefined, photos: [], remindBefore: '' }
 }
 
 function buildDays(startDate, endDate, existingDays) {
@@ -56,8 +59,28 @@ export default function TripForm() {
   }, [form.startDate, form.endDate])
 
   const days = form.days || []
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState('')
+  const [placeSearching, setPlaceSearching] = useState(null)
+  const [placeResults, setPlaceResults] = useState([])
+  const [placeSearchTarget, setPlaceSearchTarget] = useState(null)
 
   const update = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+
+  const handleAiSuggest = async () => {
+    setAiLoading(true)
+    setAiResult('')
+    try {
+      const prompt = `你是一位旅行规划助手。用户将去 ${form.destination || '某地'}，${form.startDate || '开始日期'} 到 ${form.endDate || '结束日期'}，类型：${form.type}。
+请给出行程建议，包含每日主要景点、餐厅建议，格式简洁，便于复制到日程中。`
+      const text = await callLLM([{ role: 'user', content: prompt }])
+      setAiResult(text)
+    } catch (err) {
+      setAiResult(`错误: ${err.message}`)
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   const addActivity = (dayIdx) => {
     setForm(prev => ({
@@ -92,6 +115,59 @@ export default function TripForm() {
       )
     }))
   }
+
+  const addPhoto = async (dayIdx, actIdx, e) => {
+    const file = e.target.files?.[0]
+    if (!file?.type.startsWith('image/')) return
+    try {
+      const base64 = await readAsBase64(file)
+      updateActivity(dayIdx, actIdx, 'photos', [...(days[dayIdx]?.activities?.[actIdx]?.photos || []), base64])
+    } catch (err) {
+      alert('图片处理失败')
+    }
+    e.target.value = ''
+  }
+  const removePhoto = (dayIdx, actIdx, photoIdx) => {
+    const photos = (days[dayIdx]?.activities?.[actIdx]?.photos || []).filter((_, i) => i !== photoIdx)
+    updateActivity(dayIdx, actIdx, 'photos', photos)
+  }
+
+  const handlePlaceSearch = async (dayIdx, actIdx) => {
+    const place = days[dayIdx]?.activities?.[actIdx]?.place || ''
+    if (!place.trim() || place.length < 2) {
+      alert('请先输入地点名称（至少2个字）')
+      return
+    }
+    setPlaceSearchTarget({ dayIdx, actIdx })
+    setPlaceSearching(`${dayIdx}-${actIdx}`)
+    setPlaceResults([])
+    try {
+      const list = await searchPlace(place, 5)
+      setPlaceResults(list)
+      if (list.length === 0) alert('未找到匹配地点')
+    } catch (err) {
+      alert('搜索失败: ' + err.message)
+    } finally {
+      setPlaceSearching(null)
+    }
+  }
+  const selectPlace = (item) => {
+    if (!placeSearchTarget) return
+    const { dayIdx, actIdx } = placeSearchTarget
+    updateActivity(dayIdx, actIdx, 'place', item.display)
+    updateActivity(dayIdx, actIdx, 'lat', item.lat)
+    updateActivity(dayIdx, actIdx, 'lng', item.lng)
+    setPlaceResults([])
+    setPlaceSearchTarget(null)
+  }
+
+  const REMIND_OPTIONS = [
+    { value: '', label: '不提醒' },
+    { value: '10', label: '前10分钟' },
+    { value: '30', label: '前30分钟' },
+    { value: '60', label: '前1小时' },
+    { value: '120', label: '前2小时' }
+  ]
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -144,43 +220,109 @@ export default function TripForm() {
         <div style={styles.field}>
           <label>备注</label>
           <textarea placeholder="出行前说明" value={form.memo} onChange={e => update('memo', e.target.value)} />
+          <button type="button" onClick={handleAiSuggest} disabled={aiLoading} style={styles.aiBtn}>
+            {aiLoading ? '生成中...' : 'AI 建议'}
+          </button>
+          {aiResult && (
+            <div style={styles.aiResult}>
+              <pre style={styles.aiText}>{aiResult}</pre>
+              <button type="button" onClick={() => { update('memo', (form.memo || '') + '\n\n' + aiResult); setAiResult('') }} style={styles.aiApply}>
+                应用到备注
+              </button>
+            </div>
+          )}
         </div>
 
         {days.length > 0 && (
           <div style={styles.section}>
             <h3 style={styles.sectionTitle}>日程安排</h3>
+            <p style={styles.sectionHint}>每个活动可填写标题、时间、地点等；地点可搜索自动填充坐标，也可手动修改</p>
             {days.map((day, dayIdx) => (
               <div key={day.date} style={styles.dayCard}>
                 <div style={styles.dayHeader}>{day.date}</div>
                 {(day.activities || []).map((a, actIdx) => (
-                  <div key={a.id} style={styles.actRow}>
-                    <input
-                      placeholder="活动标题"
-                      value={a.title}
-                      onChange={e => updateActivity(dayIdx, actIdx, 'title', e.target.value)}
-                      style={{ flex: 2 }}
-                    />
-                    <input
-                      placeholder="时间"
-                      value={a.time}
-                      onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)}
-                      style={{ width: 80 }}
-                    />
-                    <select
-                      value={a.type}
-                      onChange={e => updateActivity(dayIdx, actIdx, 'type', e.target.value)}
-                      style={{ width: 70 }}
-                    >
-                      {ACTIVITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    <input
-                      placeholder="地点"
-                      value={a.place}
-                      onChange={e => updateActivity(dayIdx, actIdx, 'place', e.target.value)}
-                      style={{ flex: 1 }}
-                    />
+                  <div key={a.id} style={styles.actBlock}>
+                    <div style={styles.actGrid}>
+                      <div style={styles.actField}>
+                        <label style={styles.actLabel}>活动标题</label>
+                        <input
+                          placeholder="如：参观故宫"
+                          value={a.title}
+                          onChange={e => updateActivity(dayIdx, actIdx, 'title', e.target.value)}
+                          style={styles.actInput}
+                        />
+                      </div>
+                      <div style={styles.actField}>
+                        <label style={styles.actLabel}>类型</label>
+                        <select value={a.type} onChange={e => updateActivity(dayIdx, actIdx, 'type', e.target.value)} style={styles.actInput}>
+                          {ACTIVITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div style={styles.actField}>
+                        <label style={styles.actLabel}>时间（可选）</label>
+                        <input
+                          type="time"
+                          value={a.time || ''}
+                          onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)}
+                          style={styles.actInput}
+                        />
+                      </div>
+                      <div style={styles.actField}>
+                        <label style={styles.actLabel}>费用（元）</label>
+                        <input type="number" placeholder="0" value={a.cost ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'cost', e.target.value)} style={styles.actInput} />
+                      </div>
+                    </div>
+                    <div style={styles.actGrid}>
+                      <div style={styles.actField}>
+                        <label style={styles.actLabel}>地点</label>
+                        <div style={styles.placeRow}>
+                          <input placeholder="如：南京南站" value={a.place} onChange={e => updateActivity(dayIdx, actIdx, 'place', e.target.value)} style={{ ...styles.actInput, flex: 1 }} />
+                          <button type="button" onClick={() => handlePlaceSearch(dayIdx, actIdx)} disabled={placeSearching === `${dayIdx}-${actIdx}`} style={styles.searchBtn}>
+                            {placeSearching === `${dayIdx}-${actIdx}` ? '搜索中' : '选地点'}
+                          </button>
+                        </div>
+                        {placeResults.length > 0 && placeSearchTarget?.dayIdx === dayIdx && placeSearchTarget?.actIdx === actIdx && (
+                          <div style={styles.placeResults}>
+                            {placeResults.map((r, i) => (
+                              <button key={i} type="button" onClick={() => selectPlace(r)} style={styles.placeOpt}>
+                                {r.display}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div style={styles.actField}>
+                        <label style={styles.actLabel}>经度（可手动修改）</label>
+                        <input type="number" step="any" placeholder="选地点自动填充" value={a.lat ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'lat', e.target.value)} style={styles.actInput} />
+                      </div>
+                      <div style={styles.actField}>
+                        <label style={styles.actLabel}>纬度（可手动修改）</label>
+                        <input type="number" step="any" placeholder="选地点自动填充" value={a.lng ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'lng', e.target.value)} style={styles.actInput} />
+                      </div>
+                    </div>
+                    <div style={styles.actGrid}>
+                      <div style={styles.actField}>
+                        <label style={styles.actLabel}>闹钟提醒（可选）</label>
+                        <select value={a.remindBefore ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'remindBefore', e.target.value)} style={styles.actInput}>
+                          {REMIND_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div style={styles.actField}>
+                      <label style={styles.actLabel}>图片</label>
+                      <div style={styles.photoRow}>
+                        {(a.photos || []).map((p, pi) => (
+                          <div key={pi} style={styles.photoWrap}>
+                            <img src={p} alt="" style={styles.photoThumb} />
+                            <button type="button" onClick={() => removePhoto(dayIdx, actIdx, pi)} style={styles.photoDel}>×</button>
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => document.getElementById(`photo-${dayIdx}-${actIdx}`)?.click()} style={styles.addPhoto}>+ 添加图片</button>
+                        <input id={`photo-${dayIdx}-${actIdx}`} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => addPhoto(dayIdx, actIdx, e)} />
+                      </div>
+                    </div>
                     {(day.activities || []).length > 1 && (
-                      <button type="button" onClick={() => removeActivity(dayIdx, actIdx)} className="danger" style={styles.delBtn}>删</button>
+                      <button type="button" onClick={() => removeActivity(dayIdx, actIdx)} className="danger" style={styles.delBtn}>删除活动</button>
                     )}
                   </div>
                 ))}
@@ -209,11 +351,29 @@ const styles = {
   field: { marginBottom: 16 },
   row: { display: 'flex', gap: 12 },
   section: { marginTop: 24 },
-  sectionTitle: { marginBottom: 12, fontSize: 16 },
-  dayCard: { background: '#fff', padding: 12, borderRadius: 8, marginBottom: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' },
-  dayHeader: { fontWeight: 600, marginBottom: 10, color: '#0d7377' },
-  actRow: { display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' },
-  delBtn: { padding: '8px 12px', fontSize: 12 },
+  sectionTitle: { marginBottom: 8, fontSize: 16 },
+  sectionHint: { fontSize: 13, color: '#666', marginBottom: 12 },
+  dayCard: { background: '#fff', padding: 16, borderRadius: 10, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
+  dayHeader: { fontWeight: 600, marginBottom: 12, color: '#0d7377', fontSize: 15 },
+  actBlock: { marginBottom: 16, padding: 12, background: '#f9fafb', borderRadius: 8, border: '1px solid #eee' },
+  actGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 12 },
+  actField: { minWidth: 0 },
+  actLabel: { display: 'block', fontSize: 12, color: '#666', marginBottom: 4 },
+  actInput: { width: '100%', padding: '8px 10px', fontSize: 14, borderRadius: 6, border: '1px solid #ddd', boxSizing: 'border-box' },
+  placeRow: { display: 'flex', gap: 8 },
+  searchBtn: { padding: '8px 12px', fontSize: 13, whiteSpace: 'nowrap' },
+  placeResults: { marginTop: 6, border: '1px solid #ddd', borderRadius: 6, background: '#fff', maxHeight: 150, overflow: 'auto' },
+  placeOpt: { display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13 },
+  photoRow: { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  photoWrap: { position: 'relative' },
+  photoThumb: { width: 48, height: 48, objectFit: 'cover', borderRadius: 6 },
+  photoDel: { position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: '#c00', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12 },
+  addPhoto: { padding: '12px 16px', display: 'flex', alignItems: 'center', border: '1px dashed #ccc', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13 },
+  aiBtn: { marginTop: 8, padding: '8px 16px', fontSize: 14 },
+  aiResult: { marginTop: 8, padding: 12, background: '#f5f5f5', borderRadius: 8 },
+  aiText: { whiteSpace: 'pre-wrap', fontSize: 14, margin: '0 0 8px 0' },
+  aiApply: { padding: '6px 12px', fontSize: 13 },
+  delBtn: { marginTop: 8, padding: '8px 12px', fontSize: 12 },
   addBtn: { marginTop: 4, padding: '8px 12px', fontSize: 13 },
   submit: { width: '100%', padding: 14, marginTop: 16 }
 }
