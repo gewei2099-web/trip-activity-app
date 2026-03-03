@@ -7,6 +7,7 @@ import { readAsBase64 } from '../utils/image'
 import { callLLM } from '../utils/llm'
 import { searchPlace } from '../utils/geocode'
 import TimeSelect from '../components/TimeSelect'
+import DateSelect from '../components/DateSelect'
 import MapPicker from '../components/MapPicker'
 
 function emptyActivity() {
@@ -183,6 +184,14 @@ export default function TripForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!form.startDate || !form.endDate) {
+      alert('请选择开始和结束日期')
+      return
+    }
+    if (form.startDate > form.endDate) {
+      alert('结束日期不能早于开始日期')
+      return
+    }
     const trip = {
       ...form,
       id: form.id || uuid(),
@@ -218,11 +227,11 @@ export default function TripForm() {
         <div style={styles.row}>
           <div style={styles.field}>
             <label>开始日期</label>
-            <input type="date" value={form.startDate} onChange={e => update('startDate', e.target.value)} required />
+            <DateSelect value={form.startDate} onChange={v => update('startDate', v)} />
           </div>
           <div style={styles.field}>
             <label>结束日期</label>
-            <input type="date" value={form.endDate} onChange={e => update('endDate', e.target.value)} required />
+            <DateSelect value={form.endDate} onChange={v => update('endDate', v)} min={form.startDate} />
           </div>
         </div>
         <div style={styles.field}>

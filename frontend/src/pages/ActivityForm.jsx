@@ -6,6 +6,7 @@ import { ACTIVITY_TYPES } from '../utils/constants'
 import { readAsBase64 } from '../utils/image'
 import { searchPlace } from '../utils/geocode'
 import TimeSelect from '../components/TimeSelect'
+import DateSelect from '../components/DateSelect'
 import MapPicker from '../components/MapPicker'
 
 export default function ActivityForm() {
@@ -110,7 +111,7 @@ export default function ActivityForm() {
       <form onSubmit={handleSubmit}>
         <div style={styles.field}>
           <label>日期</label>
-          <input type="date" value={form.date} onChange={e => update('date', e.target.value)} required />
+          <DateSelect value={form.date} onChange={v => update('date', v)} />
         </div>
         <div style={styles.field}>
           <label>标题</label>
