@@ -74,7 +74,7 @@ function MapControls({ tileKey, onTileChange, mapWrapRef }) {
           <option key={k} value={k}>{k === 'carto' ? '浅色' : 'OSM'}</option>
         ))}
       </select>
-      <button type="button" onClick={handleFullscreen} style={controlStyles.btn} title="全屏">⛶</button>
+      <button type="button" onClick={handleFullscreen} style={controlStyles.btn} title="全屏">全屏</button>
     </div>
   )
 }
@@ -171,7 +171,7 @@ function PolylineDecorator({ positions, color }) {
 const controlStyles = {
   wrapper: { position: 'absolute', top: 8, right: 8, zIndex: 1000, display: 'flex', gap: 8 },
   select: { padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #ddd' },
-  btn: { padding: '6px 10px', fontSize: 16, background: '#fff', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer' }
+  btn: { padding: '6px 10px', fontSize: 14, background: '#fff', color: '#333', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer' }
 }
 
 const popupStyles = {
@@ -429,7 +429,7 @@ const styles = {
   mapHint: { fontSize: 14, color: '#666', marginBottom: 12, lineHeight: 1.5 },
   mapEditLink: { fontSize: 14, color: '#0d7377', textDecoration: 'underline' },
   dateFilter: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 },
-  dateBtn: { padding: '6px 12px', fontSize: 13, border: '1px solid #ddd', borderRadius: 6, background: '#fff', cursor: 'pointer' },
+  dateBtn: { padding: '6px 12px', fontSize: 13, border: '1px solid #ccc', borderRadius: 6, background: '#eee', color: '#555', cursor: 'pointer' },
   dateBtnActive: { background: '#0d7377', color: '#fff', borderColor: '#0d7377' },
   mapWrap: { height: 300, borderRadius: 8, overflow: 'hidden', marginTop: 8, position: 'relative' }
 }
