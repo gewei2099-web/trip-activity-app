@@ -53,6 +53,9 @@ textarea { resize: vertical; min-height: 80px; }
 label { display: block; margin-bottom: 4px; font-weight: 500; color: #555; }
 .nav-drop-a:hover { background: #f0f0f0 !important; }
 
+/* 行程地图：自定义编号标记，去掉默认图标 */
+.leaflet-marker-icon.custom-marker { background: transparent !important; border: none !important; }
+
 /* 移动端优先：一加13等 ~412px 宽度，确保触摸目标≥44px */
 @media (max-width: 480px) {
   html { font-size: 16px; }

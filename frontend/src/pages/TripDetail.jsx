@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import { getTripById, saveTrip } from '../utils/storage'
 import { callLLM } from '../utils/llm'
 import { MAP_TILES, DEFAULT_TILE } from '../utils/mapTiles'
 import L from 'leaflet'
+import 'leaflet-polylinedecorator'
 
 // 修复 Leaflet 默认图标路径
 delete L.Icon.Default.prototype._getIconUrl
@@ -14,21 +15,174 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png'
 })
 
+const DAY_COLORS = ['#0d7377', '#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2']
+const ACTIVITY_COLORS = { 景点: '#0d7377', 餐厅: '#d97706', 交通: '#2563eb', 住宿: '#7c3aed', 其他: '#6b7280' }
+
+function parseTimeToSort(t) {
+  if (!t || !t.trim()) return 9999
+  const m = t.trim().match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return 9999
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10)
+}
+
 function collectTripMarkers(trip) {
   if (!trip?.days) return []
   const list = []
-  trip.days.forEach(d => {
-    (d.activities || [])
+  trip.days.forEach((d, dayIdx) => {
+    const withCoords = (d.activities || [])
+      .map((a, actIdx) => ({ ...a, actIdx }))
       .filter(a => a.lat != null && a.lng != null && !isNaN(parseFloat(a.lat)) && !isNaN(parseFloat(a.lng)))
-      .forEach(a => {
-        list.push({
-          ...a,
-          lat: parseFloat(a.lat),
-          lng: parseFloat(a.lng)
-        })
+    withCoords.sort((a, b) => parseTimeToSort(a.time) - parseTimeToSort(b.time))
+    withCoords.forEach((a, seq) => {
+      list.push({
+        ...a,
+        lat: parseFloat(a.lat),
+        lng: parseFloat(a.lng),
+        dayDate: d.date,
+        dayIndex: dayIdx,
+        actIdxInDay: a.actIdx,
+        sequence: seq + 1
       })
+    })
   })
   return list
+}
+
+function createNumberedIcon(num, color) {
+  return L.divIcon({
+    className: 'custom-marker',
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${num}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  })
+}
+
+function MapControls({ tileKey, onTileChange, mapWrapRef }) {
+  const handleFullscreen = () => {
+    const el = mapWrapRef?.current
+    if (!el) return
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.()
+    } else {
+      document.exitFullscreen?.()
+    }
+  }
+  return (
+    <div style={controlStyles.wrapper}>
+      <select value={tileKey} onChange={e => onTileChange(e.target.value)} style={controlStyles.select}>
+        {Object.keys(MAP_TILES).map(k => (
+          <option key={k} value={k}>{k === 'carto' ? '浅色' : 'OSM'}</option>
+        ))}
+      </select>
+      <button type="button" onClick={handleFullscreen} style={controlStyles.btn} title="全屏">⛶</button>
+    </div>
+  )
+}
+
+function MapContent({ markers, selectedDate, onMarkerClick }) {
+  const map = useMap()
+  const filtered = useMemo(() => {
+    if (!selectedDate) return markers
+    return markers.filter(m => m.dayDate === selectedDate)
+  }, [markers, selectedDate])
+
+  useEffect(() => {
+    if (filtered.length === 0) return
+    if (filtered.length === 1) {
+      map.setView([filtered[0].lat, filtered[0].lng], map.getZoom())
+    } else {
+      map.fitBounds(L.latLngBounds(filtered.map(m => [m.lat, m.lng])), { padding: [30, 30] })
+    }
+  }, [filtered, map])
+
+  const polylinesByDay = useMemo(() => {
+    const byDay = {}
+    filtered.forEach(m => {
+      if (!byDay[m.dayDate]) byDay[m.dayDate] = []
+      byDay[m.dayDate].push([m.lat, m.lng])
+    })
+    return Object.entries(byDay).filter(([, pts]) => pts.length > 1)
+  }, [filtered])
+
+  return (
+    <>
+      {polylinesByDay.map(([day, pts], i) => {
+        const color = DAY_COLORS[i % DAY_COLORS.length]
+        return (
+          <React.Fragment key={day}>
+            <Polyline positions={pts} pathOptions={{ color, weight: 4, opacity: 0.8 }} />
+            <PolylineDecorator positions={pts} color={color} />
+          </React.Fragment>
+        )
+      })}
+      {filtered.map((m, i) => {
+        const color = DAY_COLORS[(m.dayIndex || 0) % DAY_COLORS.length]
+        return (
+          <Marker
+            key={`${m.dayDate}-${m.actIdxInDay}-${i}`}
+            position={[m.lat, m.lng]}
+            icon={createNumberedIcon(m.sequence, color)}
+            eventHandlers={{ click: () => onMarkerClick(m) }}
+          >
+            <Popup>
+              <div style={popupStyles.wrap}>
+                <div style={popupStyles.badge}>{m.dayDate} · {m.sequence}</div>
+                <strong style={popupStyles.title}>{m.title}</strong>
+                {m.place && <div style={popupStyles.place}>{m.place}</div>}
+                <div style={popupStyles.row}>
+                  {m.time && <span>{m.time}</span>}
+                  {m.type && <span style={{ ...popupStyles.tag, background: ACTIVITY_COLORS[m.type] || '#999' }}>{m.type}</span>}
+                  {m.cost != null && m.cost !== '' && !isNaN(parseFloat(m.cost)) && (
+                    <span style={popupStyles.cost}>¥{parseFloat(m.cost)}</span>
+                  )}
+                </div>
+                {(m.photos || []).length > 0 && (
+                  <img src={m.photos[0]} alt="" style={popupStyles.thumb} />
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        )
+      })}
+    </>
+  )
+}
+
+function PolylineDecorator({ positions, color }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!map || !positions || positions.length < 2 || typeof L.polylineDecorator !== 'function') return
+    try {
+      const latlngs = positions.map(p => L.latLng(p[0], p[1]))
+      const dec = L.polylineDecorator(latlngs, {
+        patterns: [{
+          offset: '100%',
+          repeat: 0,
+          symbol: L.Symbol.arrowHead({ pixelSize: 12, polygon: true, pathOptions: { color, weight: 1, fillColor: color } })
+        }]
+      })
+      dec.addTo(map)
+      return () => { map.removeLayer(dec) }
+    } catch (_) {}
+  }, [map, positions?.length, color])
+  return null
+}
+
+const controlStyles = {
+  wrapper: { position: 'absolute', top: 8, right: 8, zIndex: 1000, display: 'flex', gap: 8 },
+  select: { padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #ddd' },
+  btn: { padding: '6px 10px', fontSize: 16, background: '#fff', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer' }
+}
+
+const popupStyles = {
+  wrap: { minWidth: 160 },
+  badge: { fontSize: 11, color: '#666', marginBottom: 6 },
+  title: { display: 'block', fontSize: 15, marginBottom: 6 },
+  place: { fontSize: 13, color: '#666', marginBottom: 6 },
+  row: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', fontSize: 13 },
+  tag: { padding: '2px 8px', borderRadius: 4, color: '#fff', fontSize: 12 },
+  cost: { fontWeight: 600, color: '#0d7377' },
+  thumb: { width: 80, height: 80, objectFit: 'cover', borderRadius: 8, marginTop: 8 }
 }
 
 function calcTripCost(trip) {
@@ -47,7 +201,15 @@ export default function TripDetail() {
   const trip = getTripById(id)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState('')
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [tileKey, setTileKey] = useState(DEFAULT_TILE)
+  const mapWrapRef = useRef(null)
   const tripMarkers = useMemo(() => (trip ? collectTripMarkers(trip) : []), [trip])
+  const datesWithMarkers = useMemo(() => [...new Set(tripMarkers.map(m => m.dayDate))].sort(), [tripMarkers])
+
+  const handleMarkerClick = (m) => {
+    if (m.id) document.getElementById(`act-${m.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   const handleAiSummary = async () => {
     if (!trip?.diary?.trim()) return
@@ -122,33 +284,51 @@ export default function TripDetail() {
               <Link to={`/trip/${trip.id}/edit`} style={styles.mapEditLink}>去编辑</Link>
             </>
           ) : (
-            <div style={styles.mapWrap}>
-              <MapContainer
-                center={[tripMarkers[0].lat, tripMarkers[0].lng]}
-                zoom={tripMarkers.length > 1 ? undefined : 10}
-                bounds={tripMarkers.length > 1 ? L.latLngBounds(tripMarkers.map(m => [m.lat, m.lng])) : null}
-                boundsOptions={tripMarkers.length > 1 ? { padding: [30, 30] } : undefined}
-                style={{ height: '100%', width: '100%' }}
-                scrollWheelZoom={true}
-              >
-                <TileLayer
-                  attribution={MAP_TILES[DEFAULT_TILE].attribution}
-                  url={MAP_TILES[DEFAULT_TILE].url}
-                  maxZoom={MAP_TILES[DEFAULT_TILE].maxZoom}
-                />
-                {tripMarkers.map((m, i) => (
-                  <Marker key={i} position={[m.lat, m.lng]}>
-                    <Popup>
-                      <div>
-                        <strong>{m.title}</strong>
-                        {m.place && <div>{m.place}</div>}
-                        {m.time && <div>{m.time}</div>}
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </div>
+            <>
+              {datesWithMarkers.length > 1 && (
+                <div style={styles.dateFilter}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate(null)}
+                    style={{ ...styles.dateBtn, ...(!selectedDate ? styles.dateBtnActive : {}) }}
+                  >
+                    全部
+                  </button>
+                  {datesWithMarkers.map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setSelectedDate(d)}
+                      style={{ ...styles.dateBtn, ...(selectedDate === d ? styles.dateBtnActive : {}) }}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div ref={mapWrapRef} style={styles.mapWrap}>
+                <MapContainer
+                  center={[tripMarkers[0].lat, tripMarkers[0].lng]}
+                  zoom={tripMarkers.length > 1 ? undefined : 10}
+                  bounds={tripMarkers.length > 1 ? L.latLngBounds(tripMarkers.map(m => [m.lat, m.lng])) : null}
+                  boundsOptions={tripMarkers.length > 1 ? { padding: [30, 30] } : undefined}
+                  style={{ height: '100%', width: '100%' }}
+                  scrollWheelZoom={true}
+                >
+                  <TileLayer
+                    attribution={MAP_TILES[tileKey].attribution}
+                    url={MAP_TILES[tileKey].url}
+                    maxZoom={MAP_TILES[tileKey].maxZoom}
+                  />
+                  <MapContent
+                    markers={tripMarkers}
+                    selectedDate={selectedDate}
+                    onMarkerClick={handleMarkerClick}
+                  />
+                  <MapControls tileKey={tileKey} onTileChange={setTileKey} mapWrapRef={mapWrapRef} />
+                </MapContainer>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -160,7 +340,7 @@ export default function TripDetail() {
             <div key={day.date} style={styles.day}>
               <div style={styles.dayDate}>{day.date}</div>
               {(day.activities || []).filter(a => a.title?.trim()).map((a, j) => (
-                <div key={a.id || j} style={styles.actCard}>
+                <div key={a.id || j} id={a.id ? `act-${a.id}` : undefined} style={styles.actCard}>
                   <div style={styles.actTime}>{a.time || '全天'}</div>
                   <div style={styles.actTitle}>{a.title}</div>
                   {a.place && <div style={styles.actPlace}>{a.place}</div>}
@@ -248,5 +428,8 @@ const styles = {
   aiApply: { padding: '6px 12px', fontSize: 13 },
   mapHint: { fontSize: 14, color: '#666', marginBottom: 12, lineHeight: 1.5 },
   mapEditLink: { fontSize: 14, color: '#0d7377', textDecoration: 'underline' },
-  mapWrap: { height: 280, borderRadius: 8, overflow: 'hidden', marginTop: 8 }
+  dateFilter: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 },
+  dateBtn: { padding: '6px 12px', fontSize: 13, border: '1px solid #ddd', borderRadius: 6, background: '#fff', cursor: 'pointer' },
+  dateBtnActive: { background: '#0d7377', color: '#fff', borderColor: '#0d7377' },
+  mapWrap: { height: 300, borderRadius: 8, overflow: 'hidden', marginTop: 8, position: 'relative' }
 }
