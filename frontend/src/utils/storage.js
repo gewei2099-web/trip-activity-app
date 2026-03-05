@@ -1,6 +1,7 @@
 const TRIPS_KEY = 'trip_entries'
 const STANDALONE_ACTIVITIES_KEY = 'trip_standalone_activities'
 const API_CONFIG_KEY = 'trip_api_config'
+const GEOCODING_CONFIG_KEY = 'trip_geocoding_config'
 const EXPORT_VERSION = 1
 
 // --- Trips ---
@@ -86,6 +87,29 @@ export function saveApiConfig(config) {
   return config
 }
 
+// --- Geocoding Config ---
+const DEFAULT_GEOCODING_CONFIG = {
+  env: 'auto',           // 'auto' | 'cn' | 'intl'
+  amapKey: '',
+  geoapifyKey: ''
+}
+
+export function getGeocodingConfig() {
+  try {
+    const raw = localStorage.getItem(GEOCODING_CONFIG_KEY)
+    if (!raw) return { ...DEFAULT_GEOCODING_CONFIG }
+    const parsed = JSON.parse(raw)
+    return { ...DEFAULT_GEOCODING_CONFIG, ...parsed }
+  } catch {
+    return { ...DEFAULT_GEOCODING_CONFIG }
+  }
+}
+
+export function saveGeocodingConfig(config) {
+  localStorage.setItem(GEOCODING_CONFIG_KEY, JSON.stringify({ ...DEFAULT_GEOCODING_CONFIG, ...config }))
+  return config
+}
+
 // --- Import / Export ---
 export function exportData() {
   const data = {
@@ -93,7 +117,8 @@ export function exportData() {
     exportedAt: new Date().toISOString(),
     [TRIPS_KEY]: getTrips(),
     [STANDALONE_ACTIVITIES_KEY]: getStandaloneActivities(),
-    [API_CONFIG_KEY]: getApiConfig()
+    [API_CONFIG_KEY]: getApiConfig(),
+    [GEOCODING_CONFIG_KEY]: getGeocodingConfig()
   }
   return JSON.stringify(data, null, 2)
 }
@@ -107,11 +132,16 @@ export function importData(jsonStr, mode = 'merge') {
     const activities = data[STANDALONE_ACTIVITIES_KEY] || []
     const apiConfig = data[API_CONFIG_KEY]
 
+    const geocodingConfig = data[GEOCODING_CONFIG_KEY]
+
     if (mode === 'overwrite') {
       localStorage.setItem(TRIPS_KEY, JSON.stringify(Array.isArray(trips) ? trips : []))
       localStorage.setItem(STANDALONE_ACTIVITIES_KEY, JSON.stringify(Array.isArray(activities) ? activities : []))
       if (apiConfig && typeof apiConfig === 'object') {
         localStorage.setItem(API_CONFIG_KEY, JSON.stringify(apiConfig))
+      }
+      if (geocodingConfig && typeof geocodingConfig === 'object') {
+        localStorage.setItem(GEOCODING_CONFIG_KEY, JSON.stringify(geocodingConfig))
       }
     } else {
       const existingTrips = getTrips()
@@ -139,6 +169,9 @@ export function importData(jsonStr, mode = 'merge') {
       localStorage.setItem(STANDALONE_ACTIVITIES_KEY, JSON.stringify(mergedActivities))
       if (apiConfig && typeof apiConfig === 'object') {
         localStorage.setItem(API_CONFIG_KEY, JSON.stringify(apiConfig))
+      }
+      if (geocodingConfig && typeof geocodingConfig === 'object') {
+        localStorage.setItem(GEOCODING_CONFIG_KEY, JSON.stringify(geocodingConfig))
       }
     }
 

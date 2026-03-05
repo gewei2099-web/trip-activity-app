@@ -2,12 +2,15 @@ import React, { useState, useEffect, useRef } from 'react'
 import {
   getApiConfig,
   saveApiConfig,
+  getGeocodingConfig,
+  saveGeocodingConfig,
   exportData,
   importData
 } from '../utils/storage'
 
 export default function Settings() {
   const [config, setConfig] = useState(getApiConfig())
+  const [geoConfig, setGeoConfig] = useState(getGeocodingConfig())
   const [saved, setSaved] = useState(false)
   const [importMsg, setImportMsg] = useState(null)
   const fileInputRef = useRef(null)
@@ -19,7 +22,12 @@ export default function Settings() {
     return () => clearTimeout(t)
   }, [config])
 
+  useEffect(() => {
+    saveGeocodingConfig(geoConfig)
+  }, [geoConfig])
+
   const update = (k, v) => setConfig(prev => ({ ...prev, [k]: v }))
+  const updateGeo = (k, v) => setGeoConfig(prev => ({ ...prev, [k]: v }))
 
   const handleExport = () => {
     const data = exportData()
@@ -117,6 +125,39 @@ export default function Settings() {
       </section>
 
       <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>地点搜索（可选）</h2>
+        <p style={styles.hint}>配置高德/Geoapify Key 可提升地点搜索效果。国内优先高德，海外优先 Geoapify。Key 仅存本机。</p>
+        <div style={styles.field}>
+          <label>使用环境</label>
+          <select value={geoConfig.env ?? 'auto'} onChange={e => updateGeo('env', e.target.value)} style={styles.select}>
+            <option value="auto">自动（按网络检测）</option>
+            <option value="cn">国内优先</option>
+            <option value="intl">海外优先</option>
+          </select>
+        </div>
+        <div style={styles.field}>
+          <label>高德 Key（国内，约 6000 次/天免费）</label>
+          <input
+            type="password"
+            placeholder="在 lbs.amap.com 申请"
+            value={geoConfig.amapKey ?? ''}
+            onChange={e => updateGeo('amapKey', e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+        <div style={styles.field}>
+          <label>Geoapify Key（海外，约 3000 次/天免费）</label>
+          <input
+            type="password"
+            placeholder="在 myprojects.geoapify.com 申请"
+            value={geoConfig.geoapifyKey ?? ''}
+            onChange={e => updateGeo('geoapifyKey', e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+      </section>
+
+      <section style={styles.section}>
         <h2 style={styles.sectionTitle}>数据导入/导出</h2>
         <p style={styles.hint}>数据存于本机，换设备需导出后在新设备导入。</p>
         <div style={styles.btnRow}>
@@ -170,6 +211,7 @@ const styles = {
   sectionTitle: { fontSize: 16, marginBottom: 8 },
   hint: { fontSize: 14, color: '#666', marginBottom: 12 },
   field: { marginBottom: 16 },
+  select: { width: '100%', padding: '10px 12px', fontSize: 16, borderRadius: 8, border: '1px solid #ddd' },
   saved: { color: '#0a0', fontSize: 14, marginBottom: 8 },
   btnRow: { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 },
   btn: { padding: '10px 16px' },

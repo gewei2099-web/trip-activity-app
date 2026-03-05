@@ -4,6 +4,14 @@
 
 ---
 
+## [2025-03-05] 地点搜索：环境切换 + 高德 + Geoapify
+
+- **环境切换**：设置中可选「自动 / 国内优先 / 海外优先」，自动模式通过 ipinfo.io 检测网络区域
+- **高德 Key**：国内环境优先使用高德地理编码（约 6000 次/天免费）
+- **Geoapify Key**：海外环境优先使用 Geoapify（约 3000 次/天免费）
+- **调用链**：国内链 = 高德 → Nominatim → Photon → Open-Meteo；海外链 = Geoapify → Nominatim → Photon → Open-Meteo
+- **导入/导出**：地点搜索配置一并导出与导入
+
 ## [2025-03-05] 地点搜索增强：英文回退与多数据源
 
 - **英文回退**：中文地点（如「新加坡樟宜机场」）在 Nominatim/Photon 无结果时，自动尝试英文名（Changi Airport Singapore）再查
