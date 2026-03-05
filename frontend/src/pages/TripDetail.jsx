@@ -70,8 +70,8 @@ function MapControls({ tileKey, onTileChange, mapWrapRef }) {
   return (
     <div style={controlStyles.wrapper}>
       <select value={tileKey} onChange={e => onTileChange(e.target.value)} style={controlStyles.select}>
-        {Object.keys(MAP_TILES).map(k => (
-          <option key={k} value={k}>{k === 'carto' ? '浅色' : 'OSM'}</option>
+        {Object.entries(MAP_TILES).map(([k, v]) => (
+          <option key={k} value={k}>{v.label || k}</option>
         ))}
       </select>
       <button type="button" onClick={handleFullscreen} style={controlStyles.btn} title="全屏">全屏</button>
