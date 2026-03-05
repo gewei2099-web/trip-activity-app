@@ -7,12 +7,15 @@ import {
   exportData,
   importData
 } from '../utils/storage'
+import { searchPlace } from '../utils/geocode'
 
 export default function Settings() {
   const [config, setConfig] = useState(getApiConfig())
   const [geoConfig, setGeoConfig] = useState(getGeocodingConfig())
   const [saved, setSaved] = useState(false)
   const [importMsg, setImportMsg] = useState(null)
+  const [geoTestMsg, setGeoTestMsg] = useState(null)
+  const [geoTestLoading, setGeoTestLoading] = useState(false)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -28,6 +31,23 @@ export default function Settings() {
 
   const update = (k, v) => setConfig(prev => ({ ...prev, [k]: v }))
   const updateGeo = (k, v) => setGeoConfig(prev => ({ ...prev, [k]: v }))
+
+  const handleGeoTest = async () => {
+    setGeoTestMsg(null)
+    setGeoTestLoading(true)
+    try {
+      const list = await searchPlace('北京', 1)
+      if (list.length > 0) {
+        setGeoTestMsg({ type: 'ok', text: `成功：${list[0].display} (${list[0].lat.toFixed(4)}, ${list[0].lng.toFixed(4)})` })
+      } else {
+        setGeoTestMsg({ type: 'warn', text: '无结果（但请求未报错）' })
+      }
+    } catch (err) {
+      setGeoTestMsg({ type: 'error', text: `失败：${err.message}` })
+    } finally {
+      setGeoTestLoading(false)
+    }
+  }
 
   const handleExport = () => {
     const data = exportData()
@@ -146,6 +166,17 @@ export default function Settings() {
           />
         </div>
         <div style={styles.field}>
+          <label>高德安全密钥</label>
+          <input
+            type="password"
+            placeholder="Key 开启数字签名时必填"
+            value={geoConfig.amapSecurityKey ?? ''}
+            onChange={e => updateGeo('amapSecurityKey', e.target.value)}
+            autoComplete="off"
+          />
+          <p style={styles.fieldHint}>若在控制台为该 Key 开启了「数字签名」，需在此填写安全密钥</p>
+        </div>
+        <div style={styles.field}>
           <label>Geoapify Key（海外，约 3000 次/天免费）</label>
           <input
             type="password"
@@ -154,6 +185,17 @@ export default function Settings() {
             onChange={e => updateGeo('geoapifyKey', e.target.value)}
             autoComplete="off"
           />
+        </div>
+        <div style={styles.field}>
+          <button type="button" onClick={handleGeoTest} disabled={geoTestLoading} style={styles.btn}>
+            {geoTestLoading ? '测试中…' : '测试地点搜索'}
+          </button>
+          <p style={styles.fieldHint}>使用当前配置搜索「北京」。测试高德请选「国内优先」；测试 Geoapify 请选「海外优先」</p>
+          {geoTestMsg && (
+            <div style={geoTestMsg.type === 'ok' ? styles.msgOk : geoTestMsg.type === 'warn' ? styles.msgWarn : styles.msgErr}>
+              {geoTestMsg.text}
+            </div>
+          )}
         </div>
       </section>
 
@@ -212,6 +254,8 @@ const styles = {
   hint: { fontSize: 14, color: '#666', marginBottom: 12 },
   field: { marginBottom: 16 },
   select: { width: '100%', padding: '10px 12px', fontSize: 16, borderRadius: 8, border: '1px solid #ddd' },
+  fieldHint: { fontSize: 12, color: '#888', marginTop: 4 },
+  msgWarn: { color: '#b8860b', fontSize: 14, marginTop: 8 },
   saved: { color: '#0a0', fontSize: 14, marginBottom: 8 },
   btnRow: { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 },
   btn: { padding: '10px 16px' },

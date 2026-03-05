@@ -1,3 +1,4 @@
+import md5 from 'md5'
 import { getGeocodingConfig } from './storage'
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
@@ -81,10 +82,20 @@ async function tryOpenMeteo(q, limit) {
   return formatOpenMeteo(data)
 }
 
-async function tryAmap(q, limit, apiKey) {
+function amapSign(params, securityKey) {
+  const keys = Object.keys(params).filter(k => k !== 'sig').sort()
+  const str = keys.map(k => `${k}=${params[k]}`).join('&') + securityKey
+  return md5(str)
+}
+
+async function tryAmap(q, limit, apiKey, securityKey) {
   if (!apiKey?.trim()) return []
-  const params = new URLSearchParams({ key: apiKey, address: q, output: 'json' })
-  const res = await fetch(`${AMAP_URL}?${params}`)
+  const params = { key: apiKey, address: q, output: 'json' }
+  if (securityKey?.trim()) {
+    params.sig = amapSign(params, securityKey.trim())
+  }
+  const query = new URLSearchParams(params).toString()
+  const res = await fetch(`${AMAP_URL}?${query}`)
   if (!res.ok) return []
   const data = await res.json()
   if (data.status !== '1' || !data.geocodes?.length) return []
@@ -155,7 +166,7 @@ export async function searchPlace(query, limit = 5) {
 
   // 国内链：高德(有key) → Nominatim → Photon → Open-Meteo
   const cnChain = [
-    ...(config.amapKey?.trim() ? [(query, lim) => tryAmap(query, lim, config.amapKey)] : []),
+    ...(config.amapKey?.trim() ? [(query, lim) => tryAmap(query, lim, config.amapKey, config.amapSecurityKey)] : []),
     tryNominatim,
     tryPhoton,
     tryOpenMeteo

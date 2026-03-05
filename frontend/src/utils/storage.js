@@ -91,6 +91,7 @@ export function saveApiConfig(config) {
 const DEFAULT_GEOCODING_CONFIG = {
   env: 'auto',           // 'auto' | 'cn' | 'intl'
   amapKey: '',
+  amapSecurityKey: '',   // 高德安全密钥（若 Key 开启数字签名则必填）
   geoapifyKey: ''
 }
 
