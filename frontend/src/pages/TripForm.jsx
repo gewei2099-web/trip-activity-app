@@ -68,6 +68,7 @@ export default function TripForm() {
   const [placeResults, setPlaceResults] = useState([])
   const [placeSearchTarget, setPlaceSearchTarget] = useState(null)
   const [mapPickerTarget, setMapPickerTarget] = useState(null)
+  const [submitLoading, setSubmitLoading] = useState(false)
 
   const update = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -158,9 +159,19 @@ export default function TripForm() {
   const selectPlace = (item) => {
     if (!placeSearchTarget) return
     const { dayIdx, actIdx } = placeSearchTarget
-    updateActivity(dayIdx, actIdx, 'place', item.display)
-    updateActivity(dayIdx, actIdx, 'lat', item.lat)
-    updateActivity(dayIdx, actIdx, 'lng', item.lng)
+    setForm(prev => ({
+      ...prev,
+      days: prev.days.map((day, i) =>
+        i === dayIdx
+          ? {
+              ...day,
+              activities: (day.activities || []).map((a, j) =>
+                j === actIdx ? { ...a, place: item.display, lat: item.lat, lng: item.lng } : a
+              )
+            }
+          : day
+      )
+    }))
     setPlaceResults([])
     setPlaceSearchTarget(null)
   }
@@ -168,9 +179,19 @@ export default function TripForm() {
   const handleMapPickerSelect = ({ lat, lng, place }) => {
     if (!mapPickerTarget) return
     const { dayIdx, actIdx } = mapPickerTarget
-    updateActivity(dayIdx, actIdx, 'lat', lat)
-    updateActivity(dayIdx, actIdx, 'lng', lng)
-    if (place) updateActivity(dayIdx, actIdx, 'place', place)
+    setForm(prev => ({
+      ...prev,
+      days: prev.days.map((day, i) =>
+        i === dayIdx
+          ? {
+              ...day,
+              activities: (day.activities || []).map((a, j) =>
+                j === actIdx ? { ...a, lat, lng, ...(place ? { place } : {}) } : a
+              )
+            }
+          : day
+      )
+    }))
     setMapPickerTarget(null)
   }
 
@@ -182,7 +203,7 @@ export default function TripForm() {
     { value: '120', label: '前2小时' }
   ]
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.startDate || !form.endDate) {
       alert('请选择开始和结束日期')
@@ -192,16 +213,33 @@ export default function TripForm() {
       alert('结束日期不能早于开始日期')
       return
     }
-    const trip = {
-      ...form,
-      id: form.id || uuid(),
-      days: days.map(day => ({
-        ...day,
-        activities: (day.activities || []).filter(a => a.title?.trim()).map(a => ({ ...a, id: a.id || uuid() }))
+    setSubmitLoading(true)
+    try {
+      const builtDays = await Promise.all(days.map(async (day) => {
+        const activities = (day.activities || []).filter(a => a.title?.trim())
+        const filled = []
+        for (const a of activities) {
+          let act = { ...a, id: a.id || uuid() }
+          const hasPlace = (act.place || '').trim().length >= 2
+          const hasCoords = act.lat != null && act.lng != null && !isNaN(parseFloat(act.lat)) && !isNaN(parseFloat(act.lng))
+          if (hasPlace && !hasCoords) {
+            try {
+              const list = await searchPlace((act.place || '').trim(), 1)
+              if (list.length > 0) {
+                act = { ...act, lat: list[0].lat, lng: list[0].lng }
+              }
+            } catch (_) {}
+          }
+          filled.push(act)
+        }
+        return { ...day, activities: filled }
       }))
+      const trip = { ...form, id: form.id || uuid(), days: builtDays }
+      saveTrip(trip)
+      navigate(`/trip/${trip.id}`)
+    } finally {
+      setSubmitLoading(false)
     }
-    saveTrip(trip)
-    navigate(`/trip/${trip.id}`)
   }
 
   return (
@@ -304,11 +342,11 @@ export default function TripForm() {
                     </div>
                     <div style={styles.actRow}>
                       <div style={styles.actField}>
-                        <label style={styles.actLabel}>经度</label>
+                        <label style={styles.actLabel}>纬度</label>
                         <input type="number" step="any" placeholder="选地点填充" value={a.lat ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'lat', e.target.value)} style={styles.actInput} />
                       </div>
                       <div style={styles.actField}>
-                        <label style={styles.actLabel}>纬度</label>
+                        <label style={styles.actLabel}>经度</label>
                         <input type="number" step="any" placeholder="选地点填充" value={a.lng ?? ''} onChange={e => updateActivity(dayIdx, actIdx, 'lng', e.target.value)} style={styles.actInput} />
                       </div>
                     </div>
@@ -349,7 +387,7 @@ export default function TripForm() {
           </div>
         )}
 
-        <button type="submit" style={styles.submit}>保存</button>
+        <button type="submit" style={styles.submit} disabled={submitLoading}>{submitLoading ? '保存中…' : '保存'}</button>
       </form>
       {mapPickerTarget && (
         <MapPicker

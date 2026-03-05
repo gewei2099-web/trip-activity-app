@@ -40,6 +40,7 @@ export default function ActivityForm() {
   const [placeSearching, setPlaceSearching] = useState(false)
   const [placeResults, setPlaceResults] = useState([])
   const [mapPickerOpen, setMapPickerOpen] = useState(false)
+  const [submitLoading, setSubmitLoading] = useState(false)
 
   const handlePlaceSearch = async () => {
     if (!form.place?.trim() || form.place.length < 2) {
@@ -59,16 +60,12 @@ export default function ActivityForm() {
     }
   }
   const selectPlace = (item) => {
-    update('place', item.display)
-    update('lat', item.lat)
-    update('lng', item.lng)
+    setForm(prev => ({ ...prev, place: item.display, lat: item.lat, lng: item.lng }))
     setPlaceResults([])
   }
 
   const handleMapPickerSelect = ({ lat, lng, place }) => {
-    update('lat', lat)
-    update('lng', lng)
-    if (place) update('place', place)
+    setForm(prev => ({ ...prev, lat, lng, ...(place ? { place } : {}) }))
     setMapPickerOpen(false)
   }
 
@@ -95,13 +92,22 @@ export default function ActivityForm() {
     update('photos', (form.photos || []).filter((_, i) => i !== idx))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const activity = {
-      ...form,
-      id: form.id || uuid()
+    let data = { ...form, id: form.id || uuid() }
+    const hasPlace = (data.place || '').trim().length >= 2
+    const hasCoords = data.lat != null && data.lng != null && !isNaN(parseFloat(data.lat)) && !isNaN(parseFloat(data.lng))
+    if (hasPlace && !hasCoords) {
+      setSubmitLoading(true)
+      try {
+        const list = await searchPlace((data.place || '').trim(), 1)
+        if (list.length > 0) {
+          data = { ...data, lat: list[0].lat, lng: list[0].lng }
+        }
+      } catch (_) {}
+      setSubmitLoading(false)
     }
-    saveStandaloneActivity(activity)
+    saveStandaloneActivity(data)
     navigate('/trips')
   }
 
@@ -146,11 +152,11 @@ export default function ActivityForm() {
         </div>
         <div style={styles.row}>
           <div style={styles.field}>
-            <label>经度（选地点自动填充，可手动修改）</label>
+            <label>纬度（选地点自动填充，可手动修改）</label>
             <input type="number" step="any" value={form.lat ?? ''} onChange={e => update('lat', e.target.value)} placeholder="选地点自动填充" />
           </div>
           <div style={styles.field}>
-            <label>纬度（选地点自动填充，可手动修改）</label>
+            <label>经度（选地点自动填充，可手动修改）</label>
             <input type="number" step="any" value={form.lng ?? ''} onChange={e => update('lng', e.target.value)} placeholder="选地点自动填充" />
           </div>
         </div>
@@ -181,7 +187,7 @@ export default function ActivityForm() {
           </div>
           <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAddPhoto} />
         </div>
-        <button type="submit" style={styles.submit}>保存</button>
+        <button type="submit" style={styles.submit} disabled={submitLoading}>{submitLoading ? '保存中…' : '保存'}</button>
       </form>
       <MapPicker
         open={mapPickerOpen}

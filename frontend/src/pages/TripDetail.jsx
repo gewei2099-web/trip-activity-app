@@ -1,7 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import { getTripById, saveTrip } from '../utils/storage'
 import { callLLM } from '../utils/llm'
+import { MAP_TILES, DEFAULT_TILE } from '../utils/mapTiles'
+import L from 'leaflet'
+
+// 修复 Leaflet 默认图标路径
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png'
+})
+
+function collectTripMarkers(trip) {
+  if (!trip?.days) return []
+  const list = []
+  trip.days.forEach(d => {
+    (d.activities || [])
+      .filter(a => a.lat != null && a.lng != null && !isNaN(parseFloat(a.lat)) && !isNaN(parseFloat(a.lng)))
+      .forEach(a => {
+        list.push({
+          ...a,
+          lat: parseFloat(a.lat),
+          lng: parseFloat(a.lng)
+        })
+      })
+  })
+  return list
+}
 
 function calcTripCost(trip) {
   let total = 0
@@ -19,6 +47,7 @@ export default function TripDetail() {
   const trip = getTripById(id)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState('')
+  const tripMarkers = useMemo(() => (trip ? collectTripMarkers(trip) : []), [trip])
 
   const handleAiSummary = async () => {
     if (!trip?.diary?.trim()) return
@@ -81,6 +110,46 @@ export default function TripDetail() {
         <div style={styles.card}>
           <h3 style={styles.section}>备注</h3>
           <p style={styles.text}>{trip.memo}</p>
+        </div>
+      )}
+
+      {trip && (
+        <div style={styles.card}>
+          <h3 style={styles.section}>活动地图</h3>
+          {tripMarkers.length === 0 ? (
+            <>
+              <p style={styles.mapHint}>暂无带坐标的活动。编辑行程时为活动填写地点并点击「选地点」或「地图选点」，保存后可在此查看</p>
+              <Link to={`/trip/${trip.id}/edit`} style={styles.mapEditLink}>去编辑</Link>
+            </>
+          ) : (
+            <div style={styles.mapWrap}>
+              <MapContainer
+                center={[tripMarkers[0].lat, tripMarkers[0].lng]}
+                zoom={tripMarkers.length > 1 ? undefined : 10}
+                bounds={tripMarkers.length > 1 ? L.latLngBounds(tripMarkers.map(m => [m.lat, m.lng])) : null}
+                boundsOptions={tripMarkers.length > 1 ? { padding: [30, 30] } : undefined}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={true}
+              >
+                <TileLayer
+                  attribution={MAP_TILES[DEFAULT_TILE].attribution}
+                  url={MAP_TILES[DEFAULT_TILE].url}
+                  maxZoom={MAP_TILES[DEFAULT_TILE].maxZoom}
+                />
+                {tripMarkers.map((m, i) => (
+                  <Marker key={i} position={[m.lat, m.lng]}>
+                    <Popup>
+                      <div>
+                        <strong>{m.title}</strong>
+                        {m.place && <div>{m.place}</div>}
+                        {m.time && <div>{m.time}</div>}
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+          )}
         </div>
       )}
 
@@ -176,5 +245,8 @@ const styles = {
   aiBtn: { marginTop: 8, padding: '8px 16px', fontSize: 14 },
   aiResult: { marginTop: 8, padding: 12, background: '#f5f5f5', borderRadius: 8 },
   aiText: { whiteSpace: 'pre-wrap', fontSize: 14, margin: '0 0 8px 0' },
-  aiApply: { padding: '6px 12px', fontSize: 13 }
+  aiApply: { padding: '6px 12px', fontSize: 13 },
+  mapHint: { fontSize: 14, color: '#666', marginBottom: 12, lineHeight: 1.5 },
+  mapEditLink: { fontSize: 14, color: '#0d7377', textDecoration: 'underline' },
+  mapWrap: { height: 280, borderRadius: 8, overflow: 'hidden', marginTop: 8 }
 }
