@@ -86,6 +86,17 @@ function MapContent({ markers, selectedDate, onMarkerClick }) {
     return markers.filter(m => m.dayDate === selectedDate)
   }, [markers, selectedDate])
 
+  // 选「全部」时按日期+时间排序并分配全局序号；选某天时用当日序号
+  const displayMarkers = useMemo(() => {
+    if (selectedDate) return filtered
+    const sorted = [...filtered].sort((a, b) => {
+      const dateCmp = (a.dayDate || '').localeCompare(b.dayDate || '')
+      if (dateCmp !== 0) return dateCmp
+      return parseTimeToSort(a.time) - parseTimeToSort(b.time)
+    })
+    return sorted.map((m, i) => ({ ...m, globalSequence: i + 1 }))
+  }, [filtered, selectedDate])
+
   useEffect(() => {
     if (filtered.length === 0) return
     if (filtered.length === 1) {
@@ -115,18 +126,19 @@ function MapContent({ markers, selectedDate, onMarkerClick }) {
           </React.Fragment>
         )
       })}
-      {filtered.map((m, i) => {
+      {displayMarkers.map((m, i) => {
         const color = DAY_COLORS[(m.dayIndex || 0) % DAY_COLORS.length]
+        const num = selectedDate ? m.sequence : m.globalSequence
         return (
           <Marker
             key={`${m.dayDate}-${m.actIdxInDay}-${i}`}
             position={[m.lat, m.lng]}
-            icon={createNumberedIcon(m.sequence, color)}
+            icon={createNumberedIcon(num, color)}
             eventHandlers={{ click: () => onMarkerClick(m) }}
           >
             <Popup>
               <div style={popupStyles.wrap}>
-                <div style={popupStyles.badge}>{m.dayDate} · {m.sequence}</div>
+                <div style={popupStyles.badge}>{m.dayDate} · {num}</div>
                 <strong style={popupStyles.title}>{m.title}</strong>
                 {m.place && <div style={popupStyles.place}>{m.place}</div>}
                 <div style={popupStyles.row}>

@@ -55,7 +55,11 @@ export default function Settings() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `trip-activity-backup-${new Date().toISOString().slice(0, 10)}.json`
+    const now = new Date()
+    const pad = n => String(n).padStart(2, '0')
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    const timeStr = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+    a.download = `trip-activity-backup-${dateStr}-${timeStr}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
