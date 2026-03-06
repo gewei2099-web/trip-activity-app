@@ -128,17 +128,19 @@ function MapContent({ markers, selectedDate, onMarkerClick }) {
       })}
       {displayMarkers.map((m, i) => {
         const color = DAY_COLORS[(m.dayIndex || 0) % DAY_COLORS.length]
-        const num = selectedDate ? m.sequence : m.globalSequence
+        const label = selectedDate
+          ? m.sequence
+          : (m.sequence === 1 ? (m.dayIndex || 0) + 1 : `${(m.dayIndex || 0) + 1}-${m.sequence}`)
         return (
           <Marker
             key={`${m.dayDate}-${m.actIdxInDay}-${i}`}
             position={[m.lat, m.lng]}
-            icon={createNumberedIcon(num, color)}
+            icon={createNumberedIcon(label, color)}
             eventHandlers={{ click: () => onMarkerClick(m) }}
           >
             <Popup>
               <div style={popupStyles.wrap}>
-                <div style={popupStyles.badge}>{m.dayDate} · {num}</div>
+                <div style={popupStyles.badge}>{m.dayDate} · {label}</div>
                 <strong style={popupStyles.title}>{m.title}</strong>
                 {m.place && <div style={popupStyles.place}>{m.place}</div>}
                 <div style={popupStyles.row}>
