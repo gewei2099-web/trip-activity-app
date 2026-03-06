@@ -44,13 +44,14 @@ export default function TripForm() {
     budget: '',
     memo: '',
     diary: '',
-    days: []
+    days: [],
+    packingList: []
   })
 
   useEffect(() => {
     if (id) {
       const t = getTripById(id)
-      if (t) setForm({ ...t, days: t.days || [] })
+      if (t) setForm({ ...t, days: t.days || [], packingList: t.packingList || [] })
     }
   }, [id])
 
@@ -234,7 +235,8 @@ export default function TripForm() {
         }
         return { ...day, activities: filled }
       }))
-      const trip = { ...form, id: form.id || uuid(), days: builtDays }
+      const { packingInput, ...formForTrip } = form
+      const trip = { ...formForTrip, id: form.id || uuid(), days: builtDays }
       saveTrip(trip)
       navigate(`/trip/${trip.id}`)
     } finally {
@@ -289,6 +291,53 @@ export default function TripForm() {
                 应用到备注
               </button>
             </div>
+          )}
+        </div>
+
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>携带物品</h3>
+          <p style={styles.sectionHint}>添加需要携带的物品，出发前在详情页勾选以防遗漏</p>
+          <div style={styles.packingRow}>
+            <input
+              type="text"
+              placeholder="如：充电器、护照"
+              value={form.packingInput ?? ''}
+              onChange={e => update('packingInput', e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const name = (form.packingInput ?? '').trim()
+                  if (name) {
+                    const list = [...(form.packingList || []), { id: uuid(), name, checked: false }]
+                    setForm(prev => ({ ...prev, packingList: list, packingInput: '' }))
+                  }
+                }
+              }}
+              style={styles.packingInput}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const name = (form.packingInput ?? '').trim()
+                if (name) {
+                  const list = [...(form.packingList || []), { id: uuid(), name, checked: false }]
+                  setForm(prev => ({ ...prev, packingList: list, packingInput: '' }))
+                }
+              }}
+              style={styles.packingAddBtn}
+            >
+              添加
+            </button>
+          </div>
+          {(form.packingList || []).length > 0 && (
+            <ul style={styles.packingList}>
+              {(form.packingList || []).map(item => (
+                <li key={item.id} style={styles.packingItem}>
+                  <span style={styles.packingName}>{item.name}</span>
+                  <button type="button" onClick={() => update('packingList', (form.packingList || []).filter(i => i.id !== item.id))} style={styles.packingDelBtn}>删除</button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
@@ -435,5 +484,12 @@ const styles = {
   aiApply: { padding: '6px 12px', fontSize: 13 },
   delBtn: { marginTop: 10, padding: '12px 16px', fontSize: 14, minHeight: 44 },
   addBtn: { marginTop: 8, padding: '14px 18px', fontSize: 15, minHeight: 44 },
-  submit: { width: '100%', padding: 16, marginTop: 20, fontSize: 16, minHeight: 48 }
+  submit: { width: '100%', padding: 16, marginTop: 20, fontSize: 16, minHeight: 48 },
+  packingRow: { display: 'flex', gap: 10, marginBottom: 12 },
+  packingInput: { flex: 1, minWidth: 0, padding: '12px 14px', fontSize: 16, borderRadius: 8, border: '1px solid #ddd', minHeight: 44 },
+  packingAddBtn: { padding: '12px 20px', fontSize: 15, minHeight: 44, whiteSpace: 'nowrap' },
+  packingList: { listStyle: 'none', padding: 0, margin: 0 },
+  packingItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8f9fa', borderRadius: 8, marginBottom: 8, border: '1px solid #e9ecef' },
+  packingName: { fontSize: 15 },
+  packingDelBtn: { padding: '6px 12px', fontSize: 13, color: '#c00', background: 'none', border: '1px solid #ccc', borderRadius: 6, cursor: 'pointer' }
 }

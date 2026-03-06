@@ -212,7 +212,8 @@ function calcTripCost(trip) {
 
 export default function TripDetail() {
   const { id } = useParams()
-  const trip = getTripById(id)
+  const [refresh, setRefresh] = useState(0)
+  const trip = useMemo(() => getTripById(id), [id, refresh])
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState('')
   const [selectedDate, setSelectedDate] = useState(null)
@@ -223,6 +224,13 @@ export default function TripDetail() {
 
   const handleMarkerClick = (m) => {
     if (m.id) document.getElementById(`act-${m.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  const handlePackingCheck = (itemId, checked) => {
+    if (!trip) return
+    const list = (trip.packingList || []).map(i => (i.id === itemId ? { ...i, checked } : i))
+    saveTrip({ ...trip, packingList: list })
+    setRefresh(r => r + 1)
   }
 
   const handleAiSummary = async () => {
@@ -288,6 +296,32 @@ export default function TripDetail() {
           <p style={styles.text}>{trip.memo}</p>
         </div>
       )}
+
+      <div style={styles.card}>
+        <h3 style={styles.section}>携带物品</h3>
+        {(trip.packingList || []).length === 0 ? (
+          <p style={styles.packingHint}>
+            暂无物品。<Link to={`/trip/${trip.id}/edit`} style={styles.mapEditLink}>在编辑页添加</Link>需要携带的物品，出发前在此勾选以防遗漏
+          </p>
+        ) : (
+          <ul style={styles.packingList}>
+            {(trip.packingList || []).map(item => (
+              <li key={item.id} style={styles.packingItem}>
+                <label style={styles.packingLabel}>
+                  <input
+                    type="checkbox"
+                    checked={!!item.checked}
+                    onChange={e => handlePackingCheck(item.id, e.target.checked)}
+                    style={styles.packingCheckbox}
+                  />
+                  <span style={item.checked ? styles.packingDone : {}}>{item.name}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Link to={`/trip/${trip.id}/edit`} style={styles.packingEditLink}>去编辑</Link>
+      </div>
 
       {trip && (
         <div style={styles.card}>
@@ -445,5 +479,11 @@ const styles = {
   dateFilter: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 },
   dateBtn: { padding: '6px 12px', fontSize: 13, border: '1px solid #ccc', borderRadius: 6, background: '#eee', color: '#555', cursor: 'pointer' },
   dateBtnActive: { background: '#0d7377', color: '#fff', borderColor: '#0d7377' },
-  mapWrap: { height: 300, borderRadius: 8, overflow: 'hidden', marginTop: 8, position: 'relative' }
+  mapWrap: { height: 300, borderRadius: 8, overflow: 'hidden', marginTop: 8, position: 'relative' },
+  packingHint: { fontSize: 14, color: '#666', marginBottom: 8, lineHeight: 1.5 },
+  packingList: { listStyle: 'none', padding: 0, margin: 0 },
+  packingItem: { marginBottom: 10 },
+  packingLabel: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 15 },
+  packingCheckbox: { width: 18, height: 18, cursor: 'pointer' },
+  packingDone: { textDecoration: 'line-through', color: '#999' }
 }
