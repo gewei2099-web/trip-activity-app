@@ -2,7 +2,11 @@ const TRIPS_KEY = 'trip_entries'
 const STANDALONE_ACTIVITIES_KEY = 'trip_standalone_activities'
 const API_CONFIG_KEY = 'trip_api_config'
 const GEOCODING_CONFIG_KEY = 'trip_geocoding_config'
+const APP_CONFIG_KEY = 'trip_app_config'
 const EXPORT_VERSION = 1
+
+const DEFAULT_ACTIVITY_TYPES = ['景点', '餐厅', '交通', '住宿', '其他']
+const DEFAULT_PACKING_CATEGORIES = ['证件', '电子', '衣物', '洗漱', '药品', '其他']
 
 // --- Trips ---
 export function getTrips() {
@@ -111,6 +115,35 @@ export function saveGeocodingConfig(config) {
   return config
 }
 
+// --- App Config (活动类型、携带物品分类) ---
+const DEFAULT_APP_CONFIG = {
+  activityTypes: DEFAULT_ACTIVITY_TYPES,
+  packingCategories: DEFAULT_PACKING_CATEGORIES
+}
+
+export function getAppConfig() {
+  try {
+    const raw = localStorage.getItem(APP_CONFIG_KEY)
+    if (!raw) return { ...DEFAULT_APP_CONFIG }
+    const parsed = JSON.parse(raw)
+    return {
+      activityTypes: Array.isArray(parsed.activityTypes) && parsed.activityTypes.length > 0 ? parsed.activityTypes : DEFAULT_ACTIVITY_TYPES,
+      packingCategories: Array.isArray(parsed.packingCategories) && parsed.packingCategories.length > 0 ? parsed.packingCategories : DEFAULT_PACKING_CATEGORIES
+    }
+  } catch {
+    return { ...DEFAULT_APP_CONFIG }
+  }
+}
+
+export function saveAppConfig(config) {
+  const merged = {
+    activityTypes: Array.isArray(config.activityTypes) && config.activityTypes.length > 0 ? config.activityTypes : DEFAULT_ACTIVITY_TYPES,
+    packingCategories: Array.isArray(config.packingCategories) && config.packingCategories.length > 0 ? config.packingCategories : DEFAULT_PACKING_CATEGORIES
+  }
+  localStorage.setItem(APP_CONFIG_KEY, JSON.stringify(merged))
+  return merged
+}
+
 // --- Import / Export ---
 export function exportData() {
   const data = {
@@ -119,7 +152,8 @@ export function exportData() {
     [TRIPS_KEY]: getTrips(),
     [STANDALONE_ACTIVITIES_KEY]: getStandaloneActivities(),
     [API_CONFIG_KEY]: getApiConfig(),
-    [GEOCODING_CONFIG_KEY]: getGeocodingConfig()
+    [GEOCODING_CONFIG_KEY]: getGeocodingConfig(),
+    [APP_CONFIG_KEY]: getAppConfig()
   }
   return JSON.stringify(data, null, 2)
 }
@@ -134,6 +168,7 @@ export function importData(jsonStr, mode = 'merge') {
     const apiConfig = data[API_CONFIG_KEY]
 
     const geocodingConfig = data[GEOCODING_CONFIG_KEY]
+    const appConfig = data[APP_CONFIG_KEY]
 
     if (mode === 'overwrite') {
       localStorage.setItem(TRIPS_KEY, JSON.stringify(Array.isArray(trips) ? trips : []))
@@ -143,6 +178,9 @@ export function importData(jsonStr, mode = 'merge') {
       }
       if (geocodingConfig && typeof geocodingConfig === 'object') {
         localStorage.setItem(GEOCODING_CONFIG_KEY, JSON.stringify(geocodingConfig))
+      }
+      if (appConfig && typeof appConfig === 'object') {
+        saveAppConfig(appConfig)
       }
     } else {
       const existingTrips = getTrips()
@@ -173,6 +211,9 @@ export function importData(jsonStr, mode = 'merge') {
       }
       if (geocodingConfig && typeof geocodingConfig === 'object') {
         localStorage.setItem(GEOCODING_CONFIG_KEY, JSON.stringify(geocodingConfig))
+      }
+      if (appConfig && typeof appConfig === 'object') {
+        saveAppConfig(appConfig)
       }
     }
 

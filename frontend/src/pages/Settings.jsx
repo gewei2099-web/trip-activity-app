@@ -4,6 +4,8 @@ import {
   saveApiConfig,
   getGeocodingConfig,
   saveGeocodingConfig,
+  getAppConfig,
+  saveAppConfig,
   exportData,
   importData
 } from '../utils/storage'
@@ -12,6 +14,7 @@ import { searchPlace } from '../utils/geocode'
 export default function Settings() {
   const [config, setConfig] = useState(getApiConfig())
   const [geoConfig, setGeoConfig] = useState(getGeocodingConfig())
+  const [appConfig, setAppConfig] = useState(getAppConfig())
   const [saved, setSaved] = useState(false)
   const [importMsg, setImportMsg] = useState(null)
   const [geoTestMsg, setGeoTestMsg] = useState(null)
@@ -29,8 +32,26 @@ export default function Settings() {
     saveGeocodingConfig(geoConfig)
   }, [geoConfig])
 
+  useEffect(() => {
+    saveAppConfig(appConfig)
+  }, [appConfig])
+
   const update = (k, v) => setConfig(prev => ({ ...prev, [k]: v }))
   const updateGeo = (k, v) => setGeoConfig(prev => ({ ...prev, [k]: v }))
+
+  const addAppConfigItem = (key, val) => {
+    const v = (val || '').trim()
+    if (!v) return
+    const list = appConfig[key] || []
+    if (list.includes(v)) return
+    setAppConfig(prev => ({ ...prev, [key]: [...list, v] }))
+  }
+  const removeAppConfigItem = (key, idx) => {
+    setAppConfig(prev => ({
+      ...prev,
+      [key]: (prev[key] || []).filter((_, i) => i !== idx)
+    }))
+  }
 
   const handleGeoTest = async () => {
     setGeoTestMsg(null)
@@ -204,6 +225,79 @@ export default function Settings() {
       </section>
 
       <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>活动类型与物品分类</h2>
+        <p style={styles.hint}>自定义活动类型（如景点、交通）和携带物品分类，用于行程编辑与携带清单。</p>
+        <div style={styles.field}>
+          <label>活动类型</label>
+          <div style={styles.tagRow}>
+            <input
+              placeholder="添加类型，回车确认"
+              value={appConfig.activityInput ?? ''}
+              onChange={e => setAppConfig(prev => ({ ...prev, activityInput: e.target.value }))}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const v = (appConfig.activityInput ?? '').trim()
+                  if (v && !(appConfig.activityTypes || []).includes(v)) {
+                    setAppConfig(prev => ({ ...prev, activityTypes: [...(prev.activityTypes || []), v], activityInput: '' }))
+                  }
+                }
+              }}
+              style={styles.tagInput}
+            />
+            <button type="button" onClick={() => {
+              const v = (appConfig.activityInput ?? '').trim()
+              if (v && !(appConfig.activityTypes || []).includes(v)) {
+                setAppConfig(prev => ({ ...prev, activityTypes: [...(prev.activityTypes || []), v], activityInput: '' }))
+              }
+            }} style={styles.tagAddBtn}>添加</button>
+          </div>
+          <div style={styles.tagList}>
+            {(appConfig.activityTypes || []).map((t, i) => (
+              <span key={t} style={styles.tag}>
+                {t}
+                <button type="button" onClick={() => setAppConfig(prev => ({ ...prev, activityTypes: (prev.activityTypes || []).filter((_, j) => j !== i) }))} style={styles.tagDel}>×</button>
+              </span>
+            ))}
+          </div>
+        </div>
+        <div style={styles.field}>
+          <label>携带物品分类</label>
+          <div style={styles.tagRow}>
+            <input
+              placeholder="添加分类，回车确认"
+              value={appConfig.packingInput ?? ''}
+              onChange={e => setAppConfig(prev => ({ ...prev, packingInput: e.target.value }))}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const v = (appConfig.packingInput ?? '').trim()
+                  if (v && !(appConfig.packingCategories || []).includes(v)) {
+                    setAppConfig(prev => ({ ...prev, packingCategories: [...(prev.packingCategories || []), v], packingInput: '' }))
+                  }
+                }
+              }}
+              style={styles.tagInput}
+            />
+            <button type="button" onClick={() => {
+              const v = (appConfig.packingInput ?? '').trim()
+              if (v && !(appConfig.packingCategories || []).includes(v)) {
+                setAppConfig(prev => ({ ...prev, packingCategories: [...(prev.packingCategories || []), v], packingInput: '' }))
+              }
+            }} style={styles.tagAddBtn}>添加</button>
+          </div>
+          <div style={styles.tagList}>
+            {(appConfig.packingCategories || []).map((c, i) => (
+              <span key={c} style={styles.tag}>
+                {c}
+                <button type="button" onClick={() => setAppConfig(prev => ({ ...prev, packingCategories: (prev.packingCategories || []).filter((_, j) => j !== i) }))} style={styles.tagDel}>×</button>
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section style={styles.section}>
         <h2 style={styles.sectionTitle}>数据导入/导出</h2>
         <p style={styles.hint}>数据存于本机，换设备需导出后在新设备导入。</p>
         <div style={styles.btnRow}>
@@ -264,5 +358,11 @@ const styles = {
   btnRow: { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 },
   btn: { padding: '10px 16px' },
   msgOk: { color: '#0a0', fontSize: 14, marginTop: 8 },
-  msgErr: { color: '#c00', fontSize: 14, marginTop: 8 }
+  msgErr: { color: '#c00', fontSize: 14, marginTop: 8 },
+  tagRow: { display: 'flex', gap: 8, marginBottom: 8 },
+  tagInput: { flex: 1, minWidth: 0, padding: '10px 12px', fontSize: 15, borderRadius: 8, border: '1px solid #ddd' },
+  tagAddBtn: { padding: '10px 16px', fontSize: 14, whiteSpace: 'nowrap' },
+  tagList: { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  tag: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#e9ecef', borderRadius: 6, fontSize: 14 },
+  tagDel: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#666', padding: 0, lineHeight: 1 }
 }

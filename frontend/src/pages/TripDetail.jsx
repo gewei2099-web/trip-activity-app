@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import { getTripById, saveTrip } from '../utils/storage'
+import { getAppConfig } from '../utils/storage'
 import { callLLM } from '../utils/llm'
 import { MAP_TILES, DEFAULT_TILE } from '../utils/mapTiles'
 import L from 'leaflet'
@@ -303,23 +304,41 @@ export default function TripDetail() {
           <p style={styles.packingHint}>
             暂无物品。<Link to={`/trip/${trip.id}/edit`} style={styles.mapEditLink}>在编辑页添加</Link>需要携带的物品，出发前在此勾选以防遗漏
           </p>
-        ) : (
-          <ul style={styles.packingList}>
-            {(trip.packingList || []).map(item => (
-              <li key={item.id} style={styles.packingItem}>
-                <label style={styles.packingLabel}>
-                  <input
-                    type="checkbox"
-                    checked={!!item.checked}
-                    onChange={e => handlePackingCheck(item.id, e.target.checked)}
-                    style={styles.packingCheckbox}
-                  />
-                  <span style={item.checked ? styles.packingDone : {}}>{item.name}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        )}
+        ) : (() => {
+          const list = trip.packingList || []
+          const packingCategories = getAppConfig().packingCategories || []
+          const byCat = {}
+          list.forEach(item => {
+            const c = (item.category && packingCategories.includes(item.category)) ? item.category : '其他'
+            if (!byCat[c]) byCat[c] = []
+            byCat[c].push(item)
+          })
+          const order = [...packingCategories, ...Object.keys(byCat).filter(c => !packingCategories.includes(c))]
+          return (
+            <div style={styles.packingGroupWrap}>
+              {order.filter(c => (byCat[c] || []).length > 0).map(cat => (
+                <div key={cat} style={styles.packingGroup}>
+                  <div style={styles.packingGroupTitle}>{cat}</div>
+                  <ul style={styles.packingList}>
+                    {(byCat[cat] || []).map(item => (
+                      <li key={item.id} style={styles.packingItem}>
+                        <label style={styles.packingLabel}>
+                          <input
+                            type="checkbox"
+                            checked={!!item.checked}
+                            onChange={e => handlePackingCheck(item.id, e.target.checked)}
+                            style={styles.packingCheckbox}
+                          />
+                          <span style={item.checked ? styles.packingDone : {}}>{item.name}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
         <Link to={`/trip/${trip.id}/edit`} style={styles.packingEditLink}>去编辑</Link>
       </div>
 
@@ -485,5 +504,8 @@ const styles = {
   packingItem: { marginBottom: 10 },
   packingLabel: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 15 },
   packingCheckbox: { width: 18, height: 18, cursor: 'pointer' },
-  packingDone: { textDecoration: 'line-through', color: '#999' }
+  packingDone: { textDecoration: 'line-through', color: '#999' },
+  packingGroupWrap: { marginTop: 4 },
+  packingGroup: { marginBottom: 16 },
+  packingGroupTitle: { fontSize: 14, fontWeight: 600, color: '#0d7377', marginBottom: 8 }
 }

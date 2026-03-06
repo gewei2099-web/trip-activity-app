@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { saveStandaloneActivity, getStandaloneActivityById } from '../utils/storage'
 import { uuid } from '../utils/uuid'
-import { ACTIVITY_TYPES } from '../utils/constants'
+import { getAppConfig } from '../utils/storage'
 import { readAsBase64 } from '../utils/image'
 import { searchPlace } from '../utils/geocode'
 import TimeSelect from '../components/TimeSelect'
@@ -131,7 +131,7 @@ export default function ActivityForm() {
           <div style={styles.field}>
             <label>类型</label>
             <select value={form.type} onChange={e => update('type', e.target.value)}>
-              {ACTIVITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              {(getAppConfig().activityTypes || []).map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         </div>

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { saveTrip, getTripById } from '../utils/storage'
 import { uuid } from '../utils/uuid'
-import { TRIP_TYPES, ACTIVITY_TYPES } from '../utils/constants'
+import { TRIP_TYPES } from '../utils/constants'
+import { getAppConfig } from '../utils/storage'
 import { readAsBase64 } from '../utils/image'
 import { callLLM } from '../utils/llm'
 import { searchPlace } from '../utils/geocode'
@@ -235,7 +236,7 @@ export default function TripForm() {
         }
         return { ...day, activities: filled }
       }))
-      const { packingInput, ...formForTrip } = form
+      const { packingInput, packingCategory, ...formForTrip } = form
       const trip = { ...formForTrip, id: form.id || uuid(), days: builtDays }
       saveTrip(trip)
       navigate(`/trip/${trip.id}`)
@@ -308,19 +309,28 @@ export default function TripForm() {
                   e.preventDefault()
                   const name = (form.packingInput ?? '').trim()
                   if (name) {
-                    const list = [...(form.packingList || []), { id: uuid(), name, checked: false }]
+                    const cat = form.packingCategory || '其他'
+                    const list = [...(form.packingList || []), { id: uuid(), name, checked: false, category: cat }]
                     setForm(prev => ({ ...prev, packingList: list, packingInput: '' }))
                   }
                 }
               }}
               style={styles.packingInput}
             />
+            <select
+              value={form.packingCategory ?? '其他'}
+              onChange={e => update('packingCategory', e.target.value)}
+              style={styles.packingCategorySelect}
+            >
+              {(getAppConfig().packingCategories || []).map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
             <button
               type="button"
               onClick={() => {
                 const name = (form.packingInput ?? '').trim()
                 if (name) {
-                  const list = [...(form.packingList || []), { id: uuid(), name, checked: false }]
+                  const cat = form.packingCategory || '其他'
+                  const list = [...(form.packingList || []), { id: uuid(), name, checked: false, category: cat }]
                   setForm(prev => ({ ...prev, packingList: list, packingInput: '' }))
                 }
               }}
@@ -329,16 +339,43 @@ export default function TripForm() {
               添加
             </button>
           </div>
-          {(form.packingList || []).length > 0 && (
-            <ul style={styles.packingList}>
-              {(form.packingList || []).map(item => (
-                <li key={item.id} style={styles.packingItem}>
-                  <span style={styles.packingName}>{item.name}</span>
-                  <button type="button" onClick={() => update('packingList', (form.packingList || []).filter(i => i.id !== item.id))} style={styles.packingDelBtn}>删除</button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {(form.packingList || []).length > 0 && (() => {
+            const list = form.packingList || []
+            const byCat = {}
+            list.forEach(item => {
+              const c = item.category || '其他'
+              if (!byCat[c]) byCat[c] = []
+              byCat[c].push(item)
+            })
+            const packingCategories = getAppConfig().packingCategories || []
+            const order = [...packingCategories, ...Object.keys(byCat).filter(c => !packingCategories.includes(c))]
+            return (
+              <div style={styles.packingGroupWrap}>
+                {order.filter(c => (byCat[c] || []).length > 0).map(cat => (
+                  <div key={cat} style={styles.packingGroup}>
+                    <div style={styles.packingGroupTitle}>{cat}</div>
+                    <ul style={styles.packingList}>
+                      {(byCat[cat] || []).map(item => (
+                        <li key={item.id} style={styles.packingItem}>
+                          <span style={styles.packingName}>{item.name}</span>
+                          <div style={styles.packingItemActions}>
+                            <select
+                              value={item.category || '其他'}
+                              onChange={e => update('packingList', list.map(i => i.id === item.id ? { ...i, category: e.target.value } : i))}
+                              style={styles.packingCategorySelectSmall}
+                            >
+                              {(getAppConfig().packingCategories || []).map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <button type="button" onClick={() => update('packingList', list.filter(i => i.id !== item.id))} style={styles.packingDelBtn}>删除</button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
 
         {days.length > 0 && (
@@ -358,7 +395,7 @@ export default function TripForm() {
                       <div style={{ ...styles.actField, flex: 1, minWidth: 0 }}>
                         <label style={styles.actLabel}>类型</label>
                         <select value={a.type} onChange={e => updateActivity(dayIdx, actIdx, 'type', e.target.value)} style={styles.actInput}>
-                          {ACTIVITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                          {(getAppConfig().activityTypes || []).map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </div>
                       <div style={{ ...styles.actField, flex: 1, minWidth: 0 }}>
@@ -491,5 +528,11 @@ const styles = {
   packingList: { listStyle: 'none', padding: 0, margin: 0 },
   packingItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8f9fa', borderRadius: 8, marginBottom: 8, border: '1px solid #e9ecef' },
   packingName: { fontSize: 15 },
-  packingDelBtn: { padding: '6px 12px', fontSize: 13, color: '#c00', background: 'none', border: '1px solid #ccc', borderRadius: 6, cursor: 'pointer' }
+  packingDelBtn: { padding: '6px 12px', fontSize: 13, color: '#c00', background: 'none', border: '1px solid #ccc', borderRadius: 6, cursor: 'pointer' },
+  packingCategorySelect: { padding: '10px 12px', fontSize: 14, borderRadius: 8, border: '1px solid #ddd', minHeight: 44, minWidth: 80 },
+  packingCategorySelectSmall: { padding: '4px 8px', fontSize: 13, borderRadius: 6, border: '1px solid #ddd' },
+  packingGroupWrap: { marginTop: 12 },
+  packingGroup: { marginBottom: 16 },
+  packingGroupTitle: { fontSize: 14, fontWeight: 600, color: '#0d7377', marginBottom: 8 },
+  packingItemActions: { display: 'flex', alignItems: 'center', gap: 8 }
 }
