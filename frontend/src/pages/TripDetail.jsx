@@ -406,7 +406,10 @@ export default function TripDetail() {
           {trip.days.map((day, i) => (
             <div key={day.date} style={styles.day}>
               <div style={styles.dayDate}>{day.date}</div>
-              {(day.activities || []).filter(a => a.title?.trim()).map((a, j) => (
+              {(day.activities || [])
+                .filter(a => a.title?.trim())
+                .sort((a, b) => parseTimeToSort(a.time) - parseTimeToSort(b.time))
+                .map((a, j) => (
                 <div key={a.id || j} id={a.id ? `act-${a.id}` : undefined} style={styles.actCard}>
                   <div style={styles.actTime}>{a.time || '全天'}</div>
                   <div style={styles.actTitle}>{a.title}</div>
