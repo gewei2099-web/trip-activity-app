@@ -217,25 +217,11 @@ export default function TripForm() {
     }
     setSubmitLoading(true)
     try {
-      const builtDays = await Promise.all(days.map(async (day) => {
+      const builtDays = days.map((day) => {
         const activities = (day.activities || []).filter(a => a.title?.trim())
-        const filled = []
-        for (const a of activities) {
-          let act = { ...a, id: a.id || uuid() }
-          const hasPlace = (act.place || '').trim().length >= 2
-          const hasCoords = act.lat != null && act.lng != null && !isNaN(parseFloat(act.lat)) && !isNaN(parseFloat(act.lng))
-          if (hasPlace && !hasCoords) {
-            try {
-              const list = await searchPlace((act.place || '').trim(), 1)
-              if (list.length > 0) {
-                act = { ...act, lat: list[0].lat, lng: list[0].lng }
-              }
-            } catch (_) {}
-          }
-          filled.push(act)
-        }
+        const filled = activities.map(a => ({ ...a, id: a.id || uuid() }))
         return { ...day, activities: filled }
-      }))
+      })
       const { packingInput, packingCategory, ...formForTrip } = form
       const trip = { ...formForTrip, id: form.id || uuid(), days: builtDays }
       saveTrip(trip)
@@ -425,6 +411,7 @@ export default function TripForm() {
                           ))}
                         </div>
                       )}
+                      <p style={styles.placeHint}>需通过「选地点」或「地图选点」设置坐标，活动才会在地图上显示</p>
                     </div>
                     <div style={styles.actRow}>
                       <div style={styles.actField}>
@@ -510,6 +497,7 @@ const styles = {
   mapBtn: { padding: '12px 16px', fontSize: 14, whiteSpace: 'nowrap', minHeight: 44 },
   placeResults: { marginTop: 8, border: '1px solid #ddd', borderRadius: 8, background: '#fff', maxHeight: 160, overflow: 'auto' },
   placeOpt: { display: 'block', width: '100%', padding: '14px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, color: '#333', minHeight: 44 },
+  placeHint: { fontSize: 12, color: '#888', marginTop: 6, marginBottom: 0 },
   photoRow: { display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
   photoWrap: { position: 'relative' },
   photoThumb: { width: 72, height: 72, objectFit: 'cover', borderRadius: 8 },
