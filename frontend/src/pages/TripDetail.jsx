@@ -211,6 +211,31 @@ function calcTripCost(trip) {
   return total
 }
 
+function formatCashValue(v, unitMode) {
+  const n = parseFloat(v)
+  if (isNaN(n)) return '-'
+  if (unitMode === 'thousands') {
+    return `${n.toLocaleString()} 千`
+  }
+  return n.toLocaleString()
+}
+
+function calcCashStatus(entry) {
+  const planned = parseFloat(entry.planned)
+  const current = parseFloat(entry.current)
+  const used = parseFloat(entry.used)
+  const safe = !isNaN(planned) && !isNaN(current) && !isNaN(used)
+  if (!safe) {
+    return { text: '数据未完整', color: '#666' }
+  }
+  const remainingNeed = Math.max(planned - used, 0)
+  const diff = current - remainingNeed
+  if (diff >= 0) {
+    return { text: '预计够用', color: '#059669' }
+  }
+  return { text: `可能不够，用前请留意`, color: '#dc2626' }
+}
+
 export default function TripDetail() {
   const { id } = useParams()
   const [refresh, setRefresh] = useState(0)
@@ -277,6 +302,50 @@ export default function TripDetail() {
         <span>{trip.startDate} ~ {trip.endDate}</span>
         {trip.budget && <span>预算: ¥{trip.budget}</span>}
       </div>
+
+      {(trip.cashEntries || []).length > 0 && (
+        <div style={styles.card}>
+          <h3 style={styles.section}>现金概览</h3>
+          <p style={styles.cashHint}>
+            用于快速判断当前现金是否足够覆盖后续行程。数值单位由币种配置的「个 / 千」决定。
+          </p>
+          <div style={styles.cashList}>
+            {(trip.cashEntries || []).map((e, i) => {
+              const label = e.label || `现金 ${i + 1}`
+              const unitMode = e.unitMode || 'ones'
+              const status = calcCashStatus(e)
+              const plannedText = formatCashValue(e.planned, unitMode)
+              const currentText = formatCashValue(e.current, unitMode)
+              const usedText = formatCashValue(e.used, unitMode)
+              return (
+                <div key={e.id || i} style={styles.cashItem}>
+                  <div style={styles.cashHeaderRow}>
+                    <div style={styles.cashName}>{label}</div>
+                    <div style={{ ...styles.cashStatus, color: status.color }}>{status.text}</div>
+                  </div>
+                  <div style={styles.cashValuesRow}>
+                    <div style={styles.cashValueCol}>
+                      <div style={styles.cashValueLabel}>计划需要</div>
+                      <div style={styles.cashValueText}>{plannedText}</div>
+                    </div>
+                    <div style={styles.cashValueCol}>
+                      <div style={styles.cashValueLabel}>已使用</div>
+                      <div style={styles.cashValueText}>{usedText}</div>
+                    </div>
+                    <div style={styles.cashValueCol}>
+                      <div style={styles.cashValueLabel}>当前剩余</div>
+                      <div style={styles.cashValueText}>{currentText}</div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <p style={styles.cashEditHint}>
+            如需调整，请在「编辑行程」中修改现金概览。
+          </p>
+        </div>
+      )}
 
       {(trip.budget != null && trip.budget !== '') || calcTripCost(trip) > 0 ? (
         <div style={styles.card}>

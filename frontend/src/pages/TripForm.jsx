@@ -43,6 +43,7 @@ export default function TripForm() {
     endDate: '',
     type: '旅游',
     budget: '',
+    cashEntries: [],
     memo: '',
     diary: '',
     days: [],
@@ -52,7 +53,14 @@ export default function TripForm() {
   useEffect(() => {
     if (id) {
       const t = getTripById(id)
-      if (t) setForm({ ...t, days: t.days || [], packingList: t.packingList || [] })
+      if (t) {
+        setForm({
+          ...t,
+          days: t.days || [],
+          packingList: t.packingList || [],
+          cashEntries: t.cashEntries || []
+        })
+      }
     }
   }, [id])
 
@@ -264,6 +272,117 @@ export default function TripForm() {
         <div style={styles.field}>
           <label>预算（元）</label>
           <input type="number" placeholder="0" value={form.budget} onChange={e => update('budget', e.target.value)} />
+        </div>
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>现金概览（多币种）</h3>
+          <p style={styles.sectionHint}>
+            用于记录本次行程的现金情况（计划需要 / 当前剩余 / 已使用），支持多种货币。适合像印尼盾这类以「千」为主的币种。
+          </p>
+          {(form.cashEntries || []).map((entry, idx) => (
+            <div key={entry.id || idx} style={styles.cashRow}>
+              <div style={styles.cashLine}>
+                <div style={styles.cashField}>
+                  <label style={styles.cashLabel}>名称 / 币种</label>
+                  <input
+                    placeholder="如：印尼盾 / IDR 现金"
+                    value={entry.label ?? ''}
+                    onChange={e => {
+                      const list = [...(form.cashEntries || [])]
+                      list[idx] = { ...entry, label: e.target.value }
+                      update('cashEntries', list)
+                    }}
+                    style={styles.cashInput}
+                  />
+                </div>
+                <div style={{ ...styles.cashField, flexBasis: 110, maxWidth: 140 }}>
+                  <label style={styles.cashLabel}>单位</label>
+                  <select
+                    value={entry.unitMode || 'ones'}
+                    onChange={e => {
+                      const list = [...(form.cashEntries || [])]
+                      list[idx] = { ...entry, unitMode: e.target.value }
+                      update('cashEntries', list)
+                    }}
+                    style={styles.cashInput}
+                  >
+                    <option value="ones">个</option>
+                    <option value="thousands">千</option>
+                  </select>
+                </div>
+              </div>
+              <div style={styles.cashLine}>
+                <div style={styles.cashField}>
+                  <label style={styles.cashLabel}>计划需要</label>
+                  <input
+                    type="number"
+                    placeholder={entry.unitMode === 'thousands' ? '如：200（表示 200 千）' : '如：200000'}
+                    value={entry.planned ?? ''}
+                    onChange={e => {
+                      const list = [...(form.cashEntries || [])]
+                      list[idx] = { ...entry, planned: e.target.value }
+                      update('cashEntries', list)
+                    }}
+                    style={styles.cashInput}
+                  />
+                </div>
+                <div style={styles.cashField}>
+                  <label style={styles.cashLabel}>当前剩余</label>
+                  <input
+                    type="number"
+                    placeholder={entry.unitMode === 'thousands' ? '如：140（表示 140 千）' : '如：140000'}
+                    value={entry.current ?? ''}
+                    onChange={e => {
+                      const list = [...(form.cashEntries || [])]
+                      list[idx] = { ...entry, current: e.target.value }
+                      update('cashEntries', list)
+                    }}
+                    style={styles.cashInput}
+                  />
+                </div>
+                <div style={styles.cashField}>
+                  <label style={styles.cashLabel}>已使用</label>
+                  <input
+                    type="number"
+                    placeholder={entry.unitMode === 'thousands' ? '如：60（表示 60 千）' : '如：60000'}
+                    value={entry.used ?? ''}
+                    onChange={e => {
+                      const list = [...(form.cashEntries || [])]
+                      list[idx] = { ...entry, used: e.target.value }
+                      update('cashEntries', list)
+                    }}
+                    style={styles.cashInput}
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const list = (form.cashEntries || []).filter((_, i) => i !== idx)
+                  update('cashEntries', list)
+                }}
+                style={styles.cashRemoveBtn}
+              >
+                删除该币种
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              const list = [...(form.cashEntries || []), {
+                id: uuid(),
+                label: '',
+                unitMode: 'thousands',
+                planned: '',
+                current: '',
+                used: ''
+              }]
+              update('cashEntries', list)
+            }}
+            style={styles.cashAddBtn}
+          >
+            + 添加一种现金
+          </button>
         </div>
         <div style={styles.field}>
           <label>备注</label>
