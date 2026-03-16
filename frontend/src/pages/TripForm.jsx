@@ -276,7 +276,7 @@ export default function TripForm() {
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>现金概览（多币种）</h3>
           <p style={styles.sectionHint}>
-            用于记录本次行程的现金情况（计划需要 / 当前剩余 / 已使用），支持多种货币。适合像印尼盾这类以「千」为主的币种。
+            记录本次行程的现金情况（后续需要 / 当前剩余 / 已使用），支持多种货币。
           </p>
           {(form.cashEntries || []).map((entry, idx) => (
             <div key={entry.id || idx} style={styles.cashRow}>
@@ -305,17 +305,17 @@ export default function TripForm() {
                     }}
                     style={styles.cashInput}
                   >
-                    <option value="ones">个</option>
-                    <option value="thousands">千</option>
+                    <option value="ones">原金额</option>
+                    <option value="thousands">K（以千为单位）</option>
                   </select>
                 </div>
               </div>
               <div style={styles.cashLine}>
                 <div style={styles.cashField}>
-                  <label style={styles.cashLabel}>计划需要</label>
+                  <label style={styles.cashLabel}>后续需要</label>
                   <input
                     type="number"
-                    placeholder={entry.unitMode === 'thousands' ? '如：200（表示 200 千）' : '如：200000'}
+                    placeholder={entry.unitMode === 'thousands' ? '如：200（表示 200K）' : '如：200000'}
                     value={entry.planned ?? ''}
                     onChange={e => {
                       const list = [...(form.cashEntries || [])]
@@ -329,7 +329,7 @@ export default function TripForm() {
                   <label style={styles.cashLabel}>当前剩余</label>
                   <input
                     type="number"
-                    placeholder={entry.unitMode === 'thousands' ? '如：140（表示 140 千）' : '如：140000'}
+                    placeholder={entry.unitMode === 'thousands' ? '如：140（表示 140K）' : '如：140000'}
                     value={entry.current ?? ''}
                     onChange={e => {
                       const list = [...(form.cashEntries || [])]
@@ -343,7 +343,7 @@ export default function TripForm() {
                   <label style={styles.cashLabel}>已使用</label>
                   <input
                     type="number"
-                    placeholder={entry.unitMode === 'thousands' ? '如：60（表示 60 千）' : '如：60000'}
+                    placeholder={entry.unitMode === 'thousands' ? '如：60（表示 60K）' : '如：60000'}
                     value={entry.used ?? ''}
                     onChange={e => {
                       const list = [...(form.cashEntries || [])]
